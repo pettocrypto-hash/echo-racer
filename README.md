@@ -19,7 +19,7 @@ Läuft rein statisch (GitHub Pages), als PWA installierbar, offline im Solo-Modu
 |---|---|
 | **Solo-Rennen** | Gegen 0–5 KI-Fahrer in drei Stärken (Leicht, Mittel, Schwer), 3/4/5/7 Runden, Richtung normal oder **gespiegelt** |
 | **Grand Prix** | Meisterschaft über 5 Rennen (alle Welten, je 3 Runden) gegen 5 KI-Fahrer. Punkte 10 · 8 · 6 · 5 · 4 · 3, Gesamtwertung nach jedem Rennen, der Führende startet hinten. Am Ende Pokal mit **1–3 Sternen** (nach Punkten) – der Titel schaltet den Gold-Lack frei. Die **Pokal-Sammlung** zeigt je Schwierigkeit und Tempo-Klasse den besten Pokal. |
-| **Zeitfahren** | Allein gegen die eigenen Echos. Die Bestzeit wird gespeichert und fährt beim nächsten Mal als goldener **Rekord-Geist** mit (nicht fest). Gespiegelte Strecken haben eigene Rekorde. |
+| **Zeitfahren** | Allein gegen die eigenen Echos. Die Bestzeit wird gespeichert und fährt beim nächsten Mal als pinker **Rekord-Geist** mit (nicht fest). Dazu fährt ein **Medaillen-Geist** in Medaillenfarbe genau die Zielzeit der nächsten noch fehlenden Medaille vor (Bronze → Silber → Gold → Echo): die beste fliegende Runde der schweren KI, auf die Medaillenzeit gestreckt. Gespiegelte Strecken haben eigene Rekorde. |
 | **Online** | Host erstellt einen Raum → 4-stelliger Code, Link und QR-Code. Bis zu 6 Spieler, freie Plätze optional mit KI auffüllen. Die Strecke wird per **Abstimmung** bestimmt (jeder tippt eine Streckenkarte an, beim Start entscheidet ein **Strecken-Roulette** – jede Stimme ist ein Los) oder vom Host fest gewählt, auch gespiegelt. |
 
 ### Echos im Detail

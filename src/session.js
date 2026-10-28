@@ -9,7 +9,7 @@ import { Track } from './game/track.js';
 import { trackDefById, medalFor, medalTimes, MEDALS } from './game/trackDefs.js';
 import { RaceSim } from './game/sim.js';
 import { packState, unpackState, stepCar, assistSteer } from './game/car.js';
-import { decodeEcho, encodeEcho } from './game/echo.js';
+import { decodeEcho, encodeEcho, stretchEcho } from './game/echo.js';
 import { H_SHOCK, H_RAM, SHOCK_R } from './game/hacks.js';
 import { RaceView } from './render/view.js';
 import { clamp, lerp, lerpAngle, wrapAngle, round2, round3, fmtTime } from './util.js';
@@ -113,6 +113,8 @@ export class RaceSession {
     this.lastResetReq = -9;
     this.record = this.mode === 'timetrial' ? loadRecord(this.trackId) : null;
     this.startRecordTime = this.record ? this.record.time : null;
+    // Medaillen-Geist: fährt die Zielzeit der nächsten noch fehlenden Medaille vor (nur Zeitfahren)
+    this.medalGhost = this.mode === 'timetrial' ? this._makeMedalGhost() : null;
     this.newRecord = false;
     this.daily = opts.daily || null;
     this.cls = opts.cls ?? 1;
@@ -848,8 +850,14 @@ export class RaceSession {
       case 'lapStart':
         if (isMe && this.mode === 'timetrial' && this.record && this.record.enc) {
           const data = decodeEcho(this.record.enc);
-          this.sim.addEcho({ id: 'rec', owner: 'record', lap: 0, t0: ev.t, dur: this.record.dur, kind: 'record', solid: false, color: '#ffd23d' }, data);
+          this.sim.addEcho({ id: 'rec', owner: 'record', lap: 0, t0: ev.t, dur: this.record.dur, kind: 'record', solid: false, color: '#ff5fd0' }, data);
           hud.toast('REKORD-GEIST: ' + fmtTime(this.record.time), 'echo');
+        }
+        if (isMe && this.mode === 'timetrial' && this.medalGhost) {
+          const g = this.medalGhost;
+          if (this.sim.addEcho({ id: 'medal', owner: 'medal', lap: 0, t0: ev.t, dur: g.dur, kind: 'record', solid: false, color: g.medal.color }, g.data)) {
+            hud.toast(`${g.medal.icon} ${g.medal.name.toUpperCase()}-GEIST: ${fmtTime(g.time)}`, 'echo');
+          }
         }
         break;
       case 'hack': {
@@ -1093,6 +1101,24 @@ export class RaceSession {
   }
 
   // Zeitfahren: nächste noch nicht erreichte Medaille (für die HUD-Zeile)
+  // Medaillen-Geist bauen: die schwere KI fährt die Strecke kurz ohne Grafik (wenige ms); ihre beste fliegende Runde
+  // wird auf die Zielzeit der nächsten fehlenden Medaille gestreckt – gleiche Linie, genau das Medaillen-Tempo
+  _makeMedalGhost() {
+    const got = medalFor(this.trackId, this.record ? this.record.time : Infinity);
+    if (got === 0) return null; // alle Medaillen: nur noch der eigene Rekord-Geist
+    const medal = MEDALS[got < 0 ? MEDALS.length - 1 : got - 1];
+    const target = medalTimes(this.trackId)[medal.id];
+    const sim = new RaceSim({ track: this.track, laps: 3, mode: 'timetrial', entrants: [{ id: 'G', name: 'Geist', kind: 'ai', car: 0, color: '#ffffff', ai: 2 }] });
+    let lap = null;
+    while (sim.time < 200 && !sim.cars[0].finished) {
+      sim.step();
+      for (const ev of sim.events) if (ev.type === 'lap' && ev.rec && ev.lap >= 2 && (!lap || ev.time < lap.time)) lap = ev;
+      sim.events.length = 0;
+    }
+    if (!lap) return null;
+    return { medal, time: target, dur: target, data: stretchEcho(lap.rec.data, lap.rec.dur, target) };
+  }
+
   _medalGoal(c) {
     const best = Math.min(this.record ? this.record.time : Infinity, c.bestLap ?? Infinity);
     const got = medalFor(this.trackId, best);

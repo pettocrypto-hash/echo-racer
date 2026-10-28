@@ -44,6 +44,27 @@ export class EchoRecorder {
   }
 }
 
+// Echo-Daten zeitlich strecken/stauchen (gleiche Linie, anderes Tempo): neue Abtastpunkte im ECHO_HZ-Raster.
+// dur = bisherige Rundendauer, target = neue Dauer. Für den Medaillen-Geist im Zeitfahren.
+export function stretchEcho(data, dur, target) {
+  const n = data.length / 4;
+  const k = target / dur;
+  const m = Math.max(2, Math.floor(((n - 1) / ECHO_HZ) * k * ECHO_HZ) + 1);
+  const out = new Float32Array(m * 4);
+  for (let j = 0; j < m; j++) {
+    const f = Math.min(n - 1, j / k);
+    const i = Math.min(n - 2, Math.floor(f));
+    const u = f - i;
+    const a = i * 4;
+    const b = a + 4;
+    out[j * 4] = data[a] + (data[b] - data[a]) * u;
+    out[j * 4 + 1] = data[a + 1] + (data[b + 1] - data[a + 1]) * u;
+    out[j * 4 + 2] = data[a + 2] + (data[b + 2] - data[a + 2]) * u;
+    out[j * 4 + 3] = lerpAngle(data[a + 3], data[b + 3], u);
+  }
+  return out;
+}
+
 const I16 = (v) => Math.max(-32768, Math.min(32767, Math.round(v)));
 
 // Kompakt: 4 × Int16 pro Abtastpunkt (x/z auf 10 cm, Höhe auf 1 cm, Richtung auf 0,1 mrad)

@@ -198,15 +198,23 @@ export class Particles {
           varying vec3 vC;
           varying float vA;
           varying float vSeed;
+          float lobe(vec2 p, vec2 c, float r) {
+            return r - length(p - c);
+          }
           void main() {
-            // Comic-Wölkchen: welliger Umriss (je Teilchen anders gedreht), klare Kante, oben heller, unten Schatten
+            // Comic-Wolke aus vier Lappen (je Teilchen anders gedreht) statt einer Kugel: klare Kante,
+            // oben heller, unten Schatten, Rand etwas durchscheinend
             vec2 d = gl_PointCoord - 0.5;
-            float ang = atan(d.y, d.x) + vSeed * 6.2831;
-            float rim = 0.44 + 0.018 * sin(ang * 5.0) + 0.022 * sin(ang * 3.0 + vSeed * 17.0) + 0.01 * sin(ang * 8.0 + vSeed * 5.0);
-            float r = length(d);
-            float a = smoothstep(rim + 0.03, rim - 0.01, r);
+            float s = vSeed * 6.2831;
+            float m = max(
+              max(lobe(d, vec2(cos(s), sin(s)) * 0.12, 0.27), lobe(d, vec2(cos(s + 2.1), sin(s + 2.1)) * 0.13, 0.25)),
+              max(lobe(d, vec2(cos(s + 4.2), sin(s + 4.2)) * 0.11, 0.26), lobe(d, vec2(0.0, -0.04), 0.25))
+            );
+            float a = smoothstep(-0.012, 0.012, m);
             float lit = 0.72 + 0.42 * clamp(-d.y * 2.2 + 0.25, 0.0, 1.0) - 0.12 * smoothstep(0.1, 0.45, d.y);
-            gl_FragColor = vec4(vC * lit, a * vA);
+            // Furchen zwischen den Lappen leicht dunkler
+            lit *= 0.9 + 0.1 * smoothstep(0.0, 0.08, m);
+            gl_FragColor = vec4(vC * lit, a * vA * (0.6 + 0.4 * smoothstep(0.0, 0.12, m)));
           }`,
         transparent: true,
         depthWrite: false,
@@ -359,7 +367,7 @@ export class Particles {
         this.aCol[i3] = this.cr[i];
         this.aCol[i3 + 1] = this.cg[i];
         this.aCol[i3 + 2] = this.cb[i];
-        this.aAlpha[i] = Math.min(1, age * 8) * Math.pow(f, 1.3) * 0.78;
+        this.aAlpha[i] = Math.min(1, age * 8) * Math.pow(f, 1.3) * 0.72;
         this.aSize[i] = this.size[i] * (0.55 + 0.45 * this.seed[i]) * (0.6 + 1.5 * Math.sqrt(age));
         this.aSeed[i] = this.seed[i];
         continue;
