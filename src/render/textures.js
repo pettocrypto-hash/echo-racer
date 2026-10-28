@@ -538,6 +538,49 @@ function noisePixels(g, S, amount, seed) {
   g.putImageData(img, 0, 0);
 }
 
+// Pflaster für den Lunapark (9,6 m je Kachel): Rechtecksteine im Läuferverband, warme Grau- und Sandtöne,
+// vereinzelt rötliche Steine, dunkle Fugen, hell/dunkel abgesetzte Kanten (wirkt erhaben), feines Korn
+export function pavingTexture() {
+  return cached('paving', () => {
+    const S = 1024;
+    const PW = 128;
+    const PH = 64;
+    const c = canvas(S, S);
+    const g = c.getContext('2d');
+    const rnd = mulberry32(91);
+    g.fillStyle = '#4c4248';
+    g.fillRect(0, 0, S, S);
+    const cols = ['#9a8e92', '#a69a96', '#8e8488', '#b0a49c', '#988c8e', '#a2968e'];
+    // Stein an x und (über den Rand) bei x ± S zeichnen – nahtlos kachelbar
+    const stone = (x, y, col) => {
+      for (const ox of [-S, 0, S]) {
+        const X = x + ox;
+        if (X + PW < 0 || X > S) continue;
+        g.fillStyle = col;
+        g.fillRect(X + 3, y + 3, PW - 6, PH - 6);
+        g.fillStyle = 'rgba(255,255,255,0.13)';
+        g.fillRect(X + 3, y + 3, PW - 6, 3);
+        g.fillRect(X + 3, y + 3, 3, PH - 6);
+        g.fillStyle = 'rgba(0,0,0,0.16)';
+        g.fillRect(X + 3, y + PH - 6, PW - 6, 3);
+        g.fillRect(X + PW - 6, y + 3, 3, PH - 6);
+      }
+    };
+    for (let row = 0; row < S / PH; row++) {
+      const off = (row % 2) * (PW / 2);
+      for (let i = -1; i <= S / PW; i++) {
+        let col = cols[Math.floor(rnd() * cols.length)];
+        if (rnd() < 0.07) col = rnd() < 0.5 ? '#b0766a' : '#a8826a';
+        stone(i * PW + off, row * PH, col);
+      }
+    }
+    // Flecken und Abrieb
+    for (let i = 0; i < 70; i++) wrapBlob(g, S, rnd() * S, rnd() * S, 20 + rnd() * 70, rnd() < 0.5 ? 'rgba(255,240,220,0.05)' : 'rgba(30,20,30,0.06)');
+    noisePixels(g, S, 16, 5);
+    return finish(c, { repeat: true, aniso: 16 });
+  });
+}
+
 // Rasen (34 m je Kachel): Mähstreifen, Flecken, dichte Halme, Kleeinseln, Gänseblümchen und Löwenzahn
 export function grassTexture() {
   return cached('grass', () => {
@@ -1064,9 +1107,10 @@ export function roadArrowTexture() {
   });
 }
 
-// Werbebanden: 16 erfundene Sponsoren (eigene Marken, teils nach den Fahrern benannt). Atlas mit 2 × 8 Feldern
-// à 1024 × 128 px – Seitenverhältnis 8:1 wie die Tafeln. Reihenfolge = SPONSOR_IDS (Feld i: Spalte i % 2, Zeile i >> 1)
-export const SPONSOR_IDS = ['volt', 'kiko', 'byte', 'zed', 'mira', 'nyx', 'rune', 'juno', 'echofm', 'toffee', 'glitch', 'pops', 'oase', 'lavalino', 'wolke', 'zwerg'];
+// Werbebanden: 17 erfundene Sponsoren (eigene Marken, teils nach den Fahrern benannt). Atlas mit 2 Spalten à
+// 1024 × 128 px – Seitenverhältnis 8:1 wie die Tafeln. Reihenfolge = SPONSOR_IDS (Feld i: Spalte i % 2, Zeile i >> 1)
+export const SPONSOR_IDS = ['volt', 'kiko', 'byte', 'zed', 'mira', 'nyx', 'rune', 'juno', 'echofm', 'toffee', 'glitch', 'pops', 'oase', 'lavalino', 'wolke', 'zwerg', 'zucker'];
+export const SPONSOR_ROWS = Math.ceil(SPONSOR_IDS.length / 2);
 
 const SP_FONT = (weight, px, italic = true, family = 'system-ui, "Segoe UI", Arial, sans-serif') => `${italic ? 'italic ' : ''}${weight} ${px}px ${family}`;
 
@@ -1499,13 +1543,37 @@ const SPONSOR_DRAW = {
     const w = spText(g, 'GARTENZWERG', 152, 64, 80, 520, '#ffd23d', { shadow: 'rgba(0,40,0,0.35)' });
     spText(g, 'ALLES FÜR DEN GARTEN', 152 + w + 26, 68, 28, 300, '#ffffff', { weight: 800 });
   },
+  zucker(g, W, H) {
+    spPlate(g, W, H, '#ffb8e0', 'rgba(255,255,255,0.95)', '#ff8ccf');
+    // Zuckerwatte: rosa Wolke auf gestreifter Papiertüte
+    g.save();
+    g.beginPath();
+    g.moveTo(74, 70);
+    g.lineTo(98, 70);
+    g.lineTo(86, 118);
+    g.closePath();
+    g.clip();
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle = i % 2 ? '#ffffff' : '#2ca8ff';
+      g.fillRect(70 + i * 5, 66, 5, 56);
+    }
+    g.restore();
+    for (const [x, y, r, c] of [[72, 52, 20, '#ff7ac8'], [100, 50, 19, '#ff8fd4'], [86, 34, 21, '#ffa6dc'], [86, 60, 20, '#ff9ad6'], [70, 36, 13, '#ffc2e6'], [104, 32, 12, '#ffc2e6']]) {
+      g.fillStyle = c;
+      g.beginPath();
+      g.arc(x, y, r, 0, Math.PI * 2);
+      g.fill();
+    }
+    const w = spText(g, 'ZUCKERWOLKE', 152, 64, 80, 520, '#ffffff', { stroke: '#c2185b', lw: 10 });
+    spText(g, 'ZUCKERWATTE', 152 + w + 28, 68, 36, 300, '#7a1a5a', { weight: 900 });
+  },
 };
 
 export function sponsorAtlas() {
   return cached('sponsors', () => {
     const W = 1024;
     const H = 128;
-    const c = canvas(2 * W, 8 * H);
+    const c = canvas(2 * W, SPONSOR_ROWS * H);
     const g = c.getContext('2d');
     SPONSOR_IDS.forEach((id, i) => {
       g.save();

@@ -1,4 +1,4 @@
-// Die fünf Strecken. Punkte: [x, z, Breite?] in Metern, in Fahrtrichtung. Der erste Punkt ist die Startlinie.
+// Die sechs Strecken. Punkte: [x, z, Breite?] in Metern, in Fahrtrichtung. Der erste Punkt ist die Startlinie.
 // pads: Boostfelder (u = Anteil der Runde, d = seitliche Lage -1…1)
 // jumps: Sprungschanzen über die ganze Bahn (u = Lage der Absprungkante) – nur auf langen Geraden
 // hills: Höhenprofil [u, Höhe in m] (Startbereich flach lassen), bridge: Brückenhöhe über der Kreuzung einer Acht
@@ -196,6 +196,49 @@ TRACK_DEFS.push({
   hills: [[0, 0], [0.14, 0], [0.3, 4], [0.4, 0], [0.55, 5], [0.68, -1.5], [0.8, 1], [0.9, 0]],
 });
 
+// Sechste Strecke: Lunapark am Abend – Haarnadel oben, S-Kurve durch die Parkmitte, Zirkuszelt-Durchfahrt
+// auf der Gegengeraden (tent = Lage der Zeltmitte als Anteil der Runde, dort ist die Bahn flach und gerade)
+TRACK_DEFS.push({
+  id: 'park',
+  name: 'Lunapark',
+  theme: 'park',
+  width: 15,
+  floor: -5,
+  feature: 'Spielzeugbahn durch einen Lunapark am Abend – Haarnadel, Riesenrad, Achterbahn und Zirkuszelt-Durchfahrt.',
+  music: 5,
+  tent: 0.848,
+  points: [
+    [0, -40],
+    [0, 80],
+    [14, 140],
+    [55, 178],
+    [120, 188],
+    [185, 182],
+    [222, 152],
+    [214, 112],
+    [176, 102],
+    [128, 108],
+    [98, 84],
+    [96, 38],
+    [118, 2],
+    [170, -8],
+    [226, -30],
+    [240, -88],
+    [206, -138],
+    [150, -150],
+    [80, -150],
+    [30, -140],
+    [4, -105],
+  ],
+  pads: [
+    { u: 0.43, d: -0.3 },
+    { u: 0.6, d: 0.4 },
+    { u: 0.79, d: 0 },
+  ],
+  jumps: [{ u: 0.055 }],
+  hills: [[0, 0], [0.12, 0], [0.2, 5], [0.3, 7], [0.36, 6], [0.43, 2.5], [0.53, -1], [0.62, 4], [0.7, 1.5], [0.74, 0], [0.97, 0]],
+});
+
 // Spiegelstrecken: Id mit Endung '~m' – alle Kurven seitenverkehrt, eigener Rekord.
 const mirrored = new Map();
 export function mirrorId(id, on) {
@@ -213,7 +256,7 @@ export function trackDefById(id) {
 
 // Medaillenzeiten fürs Zeitfahren (beste Runde in s), gemessen mit scripts/medal-times.mjs:
 // Gold = schwere KI im Allrounder, Echo-Medaille = schnellstes KI-Auto minus 1,5 %. Gespiegelt gelten dieselben Zeiten.
-const MEDAL_BASE = { neon: [21.6, 19.4], canyon: [23.1, 21.2], sky: [22.3, 20.4], lava: [30.3, 27.9], garden: [19.4, 17.8] };
+const MEDAL_BASE = { neon: [21.6, 19.4], canyon: [23.1, 21.2], sky: [22.3, 20.4], lava: [30.3, 27.9], garden: [19.4, 17.8], park: [21.6, 19.8] };
 export const MEDALS = [
   { id: 'echo', name: 'Echo', icon: '◆', color: '#7df4ff' },
   { id: 'gold', name: 'Gold', icon: '●', color: '#ffc93d' },

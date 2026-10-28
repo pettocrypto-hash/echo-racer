@@ -83,7 +83,7 @@ function medalIcon(idx, cls = '') {
   return m ? `<i class="md md-${m.id} ${cls}" title="${m.name}-Medaille">${m.icon}</i>` : '';
 }
 
-const THEME_COLORS = { neon: '#2ce7ff', canyon: '#ffb340', sky: '#ff5fb0', lava: '#ff6a1a', garden: '#6bd84a' };
+const THEME_COLORS = { neon: '#2ce7ff', canyon: '#ffb340', sky: '#ff5fb0', lava: '#ff6a1a', garden: '#6bd84a', park: '#b48cff' };
 
 export class UI {
   constructor(app) {

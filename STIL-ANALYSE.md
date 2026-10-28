@@ -128,7 +128,7 @@ Legende: ✅ umgesetzt · 🔧 in Arbeit · 📋 geplant · 💡 Idee für spät
 - ✅ **Kart-Details:** Carbon-Gewebe an den Anbauteilen, Reifen mit Straßenprofil, Flankenbeschriftung und Staub, Radmuttern, Startnummer-Aufkleber auf der Sitzlehne, Sponsor-Aufkleber und Heckflügel-Banner.
 - ✅ **Sponsor-Bandenwerbung** mit 16 eigenen Fantasie-Marken (VOLT, KIKO, NYX, RUNE, ECHO FM … + je Welt eine eigene) auf den Leisten, nachts hinterleuchtet.
 - ✅ **Steilkurven** in allen Welten.
-- 💡 **Sechste Welt** im Stil eines Vergnügungsparks oder einer Stadion-Arena.
+- ✅ **Sechste Welt: Lunapark** am Abend – Riesenrad, Karussell, Kettenkarussell, Freifallturm, Achterbahn mit Zug, Buden, Lichterketten über der Bahn, Feuerwerk und eine Durchfahrt durch ein Zirkuszelt (eigener Streckenverlauf, eigene Rummel-Musik).
 
 ---
 
@@ -175,5 +175,5 @@ Legende: ✅ umgesetzt · 🔧 in Arbeit · 📋 geplant · 💡 Idee für spät
 7. ✅ „ZIEL!"/„LOS!"-Schriftzug im großen Stil
 8. ✅ Masten mit Stoffbannern, Ballons an Start/Ziel, Kleinkram auf der Fahrbahn
 9. ✅ Tempo-Klassen mit Freischaltung · ✅ Sterne-Bewertung im Grand Prix · ✅ mehr Mimik
-10. ✅ Strecken-Abstimmung online · ✅ Texturdichte/Details (Welt, Karts, Figuren) · 💡 Echo-Arena, sechste Welt
+10. ✅ Strecken-Abstimmung online · ✅ Texturdichte/Details (Welt, Karts, Figuren) · ✅ sechste Welt (Lunapark) · 💡 Echo-Arena
 11. ✅ Steilkurven · ✅ Werbebanden mit eigenen Sponsoren · ✅ Sponsor-Aufkleber und Flügel-Banner an den Karts

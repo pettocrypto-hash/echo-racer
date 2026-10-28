@@ -408,6 +408,7 @@ const AMBIENT = {
   sparkle: { color: '#fff4ff', k: 1.2, vel: [0.3, 0.9, 0.2], box: 90, size: 0.2, tw: 1, count: 700 },
   embers: { color: '#ff7a2a', k: 2.4, vel: [0.6, 2.8, 0.4], box: 70, size: 0.18, tw: 1, count: 800 },
   pollen: { color: '#fff3b8', k: 0.9, vel: [0.8, 0.25, 0.5], box: 70, size: 0.15, tw: 1, count: 500 },
+  fair: { color: '#ffd9a0', k: 1.7, vel: [0.3, 0.45, 0.2], box: 80, size: 0.15, tw: 1, count: 420 },
 };
 
 export class Ambient {

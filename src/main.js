@@ -41,6 +41,7 @@ const WORLDS = {
   sky: { world: 'HIMMELS-WELT', icon: '☁️', color: '#ff5fb0' },
   lava: { world: 'VULKAN-WELT', icon: '🌋', color: '#ff6a1a' },
   garden: { world: 'GARTEN-WELT', icon: '🌻', color: '#6bd84a' },
+  park: { world: 'PARK-WELT', icon: '🎡', color: '#b48cff' },
 };
 function introInfo(opts, gp) {
   const def = trackDefById(opts.trackId);

@@ -1,4 +1,4 @@
-// Farb- und Lichtstimmung der vier Welten.
+// Farb- und Lichtstimmung der sechs Welten.
 // env.panels: leuchtende Flächen nur für die Spiegelungen (Umgebungs-Map), az/el in Grad.
 // grade: Color Grading (Schatten-/Lichter-Tönung, Sättigung, Kontrast-S-Kurve).
 
@@ -145,6 +145,38 @@ export const THEMES = {
     bloomThreshold: 1.15,
     exposure: 1.0,
     ambient: 'embers',
+    beams: true,
+    carEnv: 1.15,
+  },
+  // Lunapark am Abend: tief stehende Sonne, violetter Himmel mit ersten Sternen, warme Lichterketten
+  park: {
+    name: 'Lunapark',
+    // sunK: tief stehende Abendsonne gedämpft (sonst überstrahlt sie in Fahrtrichtung)
+    sky: { top: '#1a1240', mid: '#5b2f7a', horizon: '#ff9a5c', sun: [0.62, 0.1, -0.78], sunColor: '#ffc08a', sunSize: 0.055, sunK: 0.45, stars: 0.45 },
+    fog: { color: '#6a3f6e', near: 200, far: 1300 },
+    hemi: { sky: '#c9b4ff', ground: '#4a3046', intensity: 0.8 },
+    dir: { color: '#ffc896', intensity: 1.35, pos: [0.62, 0.35, -0.7], shadow: 0.72 },
+    toy: { track: '#8a52ff', stripe: '#fff2d2', rail: '#ffffff', railGlow: '#ffc93d', pylon: '#efe6ff', groundY: -5, envK: 0.95 },
+    wall: '#3a2448',
+    glow: '#ffc93d',
+    glowIntensity: 2.6,
+    pad: '#2ce7ff',
+    ground: '#8a7e86',
+    env: {
+      intensity: 0.85,
+      floor: '#3a2a3a',
+      panels: [
+        { color: '#ffb070', k: 6, az: 141, el: 4, w: 60, h: 10 },
+        { color: '#ff5fd0', k: 3, az: 30, el: 10, w: 20, h: 12 },
+        { color: '#ffd23d', k: 3, az: 250, el: 8, w: 24, h: 10 },
+        { color: '#2ce7ff', k: 2, az: 320, el: 6, w: 18, h: 8 },
+      ],
+    },
+    grade: { sat: 1.08, contrast: 0.22, shadow: '#f4f2ff', high: '#fff8ee' },
+    bloom: 0.5,
+    bloomThreshold: 1.45,
+    exposure: 1.0,
+    ambient: 'fair',
     beams: true,
     carEnv: 1.15,
   },

@@ -11,6 +11,8 @@ const STYLES = [
   { bpm: 118, chords: [[53, 57, 60], [57, 60, 64], [58, 62, 65], [48, 52, 55]], bass: 'triangle', lead: 'sine', arp: [0, 1, 2, 3, 2, 1, 0, 2], drums: 1 },
   { bpm: 134, chords: [[52, 55, 59], [48, 52, 55], [50, 54, 57], [47, 51, 54]], bass: 'sawtooth', lead: 'sawtooth', arp: [0, 0, 2, 1, 0, 2, 1, 2], drums: 1 },
   { bpm: 96, chords: [[48, 52, 55, 59], [45, 48, 52, 55], [41, 45, 48, 52], [43, 47, 50, 53]], bass: 'triangle', lead: 'sine', arp: [0, 2, 1, 3, 2, 1, 3, 2], drums: 0 },
+  // 5: Lunapark – Rummel-Orgel: Dur-Kadenz, Hm-ta-ta-Bass, Akkord-Tupfer, helle Melodie
+  { bpm: 140, chords: [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]], bass: 'triangle', lead: 'square', arp: [2, 1, 0, 1, 2, 3, 2, 1], drums: 1, oompah: true },
 ];
 
 export class AudioEngine {
@@ -363,7 +365,11 @@ export class AudioEngine {
         if (step % 2 === 1) this._hat(t, step % 4 === 3 ? 0.07 : 0.035);
       }
       // Bass
-      if (st.drums ? step % 2 === 0 : step % 8 === 0) {
+      if (st.oompah) {
+        // Hm-ta-ta: Grundton auf 1 und 3, Quinte auf 2 und 4, kurze Akkord-Tupfer auf den Achteln dazwischen
+        if (step % 4 === 0) this._voice(st.bass, midi(chord[0] - 12 + (step % 8 === 4 ? 7 : 0)), t, sixteenth * 1.8, 0.12, 900);
+        else if (step % 4 === 2) for (const nt of chord) this._voice('square', midi(nt), t, sixteenth * 0.7, 0.012, 1800);
+      } else if (st.drums ? step % 2 === 0 : step % 8 === 0) {
         const note = chord[0] - 12 + (step % 8 === 6 ? 12 : 0);
         this._voice(st.bass, midi(note), t, st.drums ? sixteenth * 1.6 : sixteenth * 7, 0.11, 700);
       }

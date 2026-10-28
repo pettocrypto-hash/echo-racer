@@ -1,11 +1,11 @@
 # ECHO RACER
 
-Mobiler Fun-Racer im Browser – schnell, bunt, kompetitiv: offene Spielzeug-Karts mit acht eigenen Fahrerfiguren, Turbostart, Drift-Hüpfer, Sprungschanzen mit Tricks und fünf Welten. Statt Items aus Kisten gibt es zwei eigene Mechaniken:
+Mobiler Fun-Racer im Browser – schnell, bunt, kompetitiv: offene Spielzeug-Karts mit acht eigenen Fahrerfiguren, Turbostart, Drift-Hüpfer, Sprungschanzen mit Tricks und sechs Welten. Statt Items aus Kisten gibt es zwei eigene Mechaniken:
 
 1. **Echos:** Jede abgeschlossene Runde hinterlässt ein leuchtendes Echo-Auto, das deine Linie dieser Runde exakt nachfährt – in Endlosschleife. Echos sind für **alle** feste Hindernisse (Treffer = Tempoverlust, kein Totalstopp), auch für dich selbst. Das Rennen wird von Runde zu Runde dichter.
 2. **Streckenhacks und Angriffe:** Driften, Windschatten und knappe Überholmanöver laden die Hack-Leiste. Damit veränderst du die Strecke **vor dem Gegner** (Barriere, Rampe, Boostfeld spiegeln, Kurve verengen, Echo-Klon) oder greifst direkt an (Schockwelle, Rammstoß mit Holo-Schild). Kein Zufall, keine Kisten – alles ist Können.
 
-Dazu: **Grand-Prix-Meisterschaft** über alle fünf Welten, **Spiegelmodus** für jede Strecke, **Fahrer-Level mit XP**, **Tages-Challenge** mit Serien-Bonus, **Medaillen im Zeitfahren**, **Stil-Kette** (Combo-Multiplikator), **Rivalen**, **20 Erfolge** und **12 Lacke** (u. a. Chrom, Holo, Carbon, Gold, Galaxie) sowie Effekte wie Speed-Streifen, Treffer-Freeze, Datenstrahlen, Feuerwerk und Fotofinish in Zeitlupe.
+Dazu: **Grand-Prix-Meisterschaft** über alle sechs Welten, **Spiegelmodus** für jede Strecke, **Fahrer-Level mit XP**, **Tages-Challenge** mit Serien-Bonus, **Medaillen im Zeitfahren**, **Stil-Kette** (Combo-Multiplikator), **Rivalen**, **20 Erfolge** und **12 Lacke** (u. a. Chrom, Holo, Carbon, Gold, Galaxie) sowie Effekte wie Speed-Streifen, Treffer-Freeze, Datenstrahlen, Feuerwerk und Fotofinish in Zeitlupe.
 
 Optik: glänzende Spielzeug-Karts mit großen Cartoon-Figuren auf einer aufgeständerten Plastik-Rennbahn – Metallic-Lack, Chrom-Motoren, dicke Reifen, Startnummern, Loopings, Booster-Tore, Sprungschanzen und eine Tribüne voller hüpfender Steckfiguren. Natürliche Farben, weiches Licht mit Umgebungsverdeckung, alles gestochen scharf (keine Bewegungs- oder Tiefenunschärfe).
 
@@ -116,8 +116,9 @@ Umschalten zwischen Touch-Lenkrad und Neigung in **Einstellungen → Steuerung**
 | Wolkenarena | Orange Bahn zwischen schwebenden Inseln (Felszapfen, Bäumchen, Kristalle, Wasserfälle), Wolken, Heißluftballons und Möwenschwärmen | Sehr breite Arenen mit 9 Boostfeldern – Hacks dominieren |
 | Lava-Kreuz | Türkise Bahn über Lavafeldern mit Fontänen, glühenden Kristallen und rauchendem Vulkan mit Lavaströmen | Eine Acht mit Kreuzung – Echos schneiden deine Linie |
 | Gartenring | Gelbe Bahn durch einen sonnigen Riesengarten: Bäume, riesige Grashalme und Sonnenblumen, Teich mit Seerosen, Bauklötze, Wasserbälle, Riesen-Gießkannen, Tulpentöpfe, Gartenschlauch, Picknickdecke, Schmetterlinge und Vögel, Lattenzaun | Kurvig mit Schanze auf der Startgeraden |
+| Lunapark | Violette Bahn durch einen Freizeitpark in der Abendsonne: Riesenrad mit Gondeln, Karussell mit wippenden Pferden, Kettenkarussell, Freifallturm, Achterbahn mit fahrendem Zug, Buden mit gestreiften Markisen, Lichterketten über der Bahn, Pflasterplätze mit Rasen und Bäumen, Feuerwerk am Himmel; eigene Rummel-Musik | Haarnadel mit 12° Steilkurve, lange S-Kurve, **Durchfahrt durch ein Zirkuszelt** auf der Gegengeraden |
 
-Auf jeder Strecke: Tribüne mit Zuschauern, Spruchband und Flutlicht an der Start-/Zielgeraden, wehende Fahnen an den Leisten, rot-weiße **Pfeiltafeln** an engen Kurven (die Pfeile zeigen in Kurvenrichtung), rot-weiße **Randsteine** an der Kurveninnenseite, **Werbebanden** mit 16 erfundenen Sponsoren auf den Leisten der Geraden (u. a. VOLT Batterien, KIKO Knusper-Kekse, NYX Nacht-Cola, RUNE Reifen, ECHO FM; je Welt eine eigene Marke wie OASE Limonade im Canyon oder LAVALINO Glüh-Limo; nachts hinterleuchtet) und **Reifenspuren**, die beim Driften und Bremsen auf der Bahn bleiben und langsam verblassen.
+Auf jeder Strecke: Tribüne mit Zuschauern, Spruchband und Flutlicht an der Start-/Zielgeraden, wehende Fahnen an den Leisten, rot-weiße **Pfeiltafeln** an engen Kurven (die Pfeile zeigen in Kurvenrichtung), rot-weiße **Randsteine** an der Kurveninnenseite, **Werbebanden** mit 17 erfundenen Sponsoren auf den Leisten der Geraden (u. a. VOLT Batterien, KIKO Knusper-Kekse, NYX Nacht-Cola, RUNE Reifen, ECHO FM; je Welt eine eigene Marke wie OASE Limonade im Canyon, LAVALINO Glüh-Limo oder ZUCKERWOLKE Zuckerwatte im Lunapark; nachts hinterleuchtet) und **Reifenspuren**, die beim Driften und Bremsen auf der Bahn bleiben und langsam verblassen.
 
 **Steilkurven:** Kurven sind je nach Radius bis etwa 13° geneigt (außen höher, Drehpunkt in der Bahnmitte); Start/Ziel, Kreuzungen und Sprungschanzen bleiben flach, in Senken wird die Neigung begrenzt. In geneigten Kurven lenkt das Kart bei Tempo bis zu 22 % stärker ein (die KI plant damit). Karts, Schatten, Reifenspuren, Echos und Hacks liegen auf der geneigten Fahrbahn; die Kamera neigt sich halb mit.
 
@@ -218,7 +219,7 @@ src/
     hacks.js                 Streckenhacks und Angriffe (Schockwelle, Rammstoß, Echo-Klon)
     ai.js                    KI-Fahrer
     sim.js                   Renn-Simulation (Runden, Positionen, Echos, Hacks)
-  render/                  Three.js: Renderer/Post-Processing, Welten, Streckenrand/Tribüne, Karts, Fahrerfiguren, Effekte, Kamera
+  render/                  Three.js: Renderer/Post-Processing, Welten (park.js: Lunapark-Fahrgeschäfte), Streckenrand/Tribüne/Werbebanden, Karts, Fahrerfiguren, Effekte, Kamera
   net/net.js               PeerJS-Verbindungen (Host/Client)
   input/input.js           Tastatur, Gamepad, Touch, Neigung
   audio/audio.js           Prozeduraler Sound

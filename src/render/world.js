@@ -7,12 +7,13 @@ import { THEMES } from './themes.js';
 import { GeoBuilder, BASIC } from './geo.js';
 import {
   toyTrackTexture, toyTrackNormal, railTexture, railNormal, plasticRoughTexture, padTexture, checkerTexture, windowTexture, playmatTexture,
-  lavaTextures, sandTexture, textTexture, billboardAtlas, setAnisotropy, grassTexture, roadArrowTexture,
+  lavaTextures, sandTexture, textTexture, billboardAtlas, setAnisotropy, grassTexture, roadArrowTexture, pavingTexture,
 } from './textures.js';
 import { mulberry32 } from '../util.js';
 import { buildChevrons, buildGrandstand, buildBannerPoles, buildBalloons, buildSponsorBoards } from './trackside.js';
 import { JUMP_LEN } from '../config.js';
 import { addDetail } from './detail.js';
+import { buildPark } from './park.js';
 
 // Detail-Schicht je nach Qualitätsstufe: aus bei „niedrig", ein Maßstab bei „mittel", sonst zwei
 const DQ = { det: 1, aniso: 8 };
@@ -80,7 +81,7 @@ function makeSkyMaterial(th, floor) {
       uHorizon: { value: col(th.sky.horizon) },
       uFloor: { value: floor },
       uSunDir: { value: new THREE.Vector3(...th.sky.sun).normalize() },
-      uSunColor: { value: col(th.sky.sunColor) },
+      uSunColor: { value: col(th.sky.sunColor, th.sky.sunK ?? 1) },
       uSunSize: { value: th.sky.sunSize },
       uStars: { value: th.sky.stars || 0 },
       uTime: { value: 0 },
@@ -583,10 +584,13 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
 
   // Stoffbanner an Masten entlang der Strecke (Weltfarben) + Ballontrauben rund um Start/Ziel
   {
-    const ACC = { neon: ['#6a2ae0', '#2ce7ff'], canyon: ['#e8582a', '#ffd23d'], sky: ['#ff5fb0', '#40d0ff'], lava: ['#3a1a14', '#ff6a1a'], garden: ['#2f8f3a', '#ffd23d'] };
+    const ACC = { neon: ['#6a2ae0', '#2ce7ff'], canyon: ['#e8582a', '#ffd23d'], sky: ['#ff5fb0', '#40d0ff'], lava: ['#3a1a14', '#ff6a1a'], garden: ['#2f8f3a', '#ffd23d'], park: ['#8a52ff', '#ffc93d'] };
     const [a1, a2] = ACC[themeId] || ACC.neon;
     const bt = { value: 0 };
-    const poles = buildBannerPoles(track, skip, parts, { RH, RW }, a1, a2, bt, det);
+    // keine Fahnenmasten im Zirkuszelt (Lunapark)
+    const tentS = track.def.tent != null ? track.def.tent * track.length : null;
+    const poleSkip = tentS == null ? skip : (k) => skip(k) || Math.abs(track.deltaS(tentS, k * track.step)) < 30;
+    const poles = buildBannerPoles(track, poleSkip, parts, { RH, RW }, a1, a2, bt, det);
     if (poles) {
       root.add(poles.mesh);
       keep(poles);
@@ -616,7 +620,8 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
   const loopRail = new GeoBuilder();
   const loopBase = gy > -40 ? gy : -14;
   let loops = 0;
-  for (const u of [0.27, 0.68]) {
+  // im Lunapark nicht: dort steht eine eigene Achterbahn
+  for (const u of themeId === 'park' ? [] : [0.27, 0.68]) {
     const s = u * track.length;
     for (const side of [1, -1]) {
       const k = track.indexAt(s);
@@ -651,6 +656,12 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
     ground = new THREE.Mesh(new THREE.PlaneGeometry(gSize, gSize), D(new THREE.MeshLambertMaterial({ map: t }), 'sand', { size: 2.6, albedo: 0.16, bump: 0.45, planar: true, coarse: 0.21 }));
   } else if (themeId === 'sky') {
     ground = new THREE.Mesh(new THREE.PlaneGeometry(gSize, gSize), new THREE.MeshLambertMaterial({ color: col(th.ground), emissive: col('#8f86ff', 0.25) }));
+  } else if (themeId === 'park') {
+    const t = pavingTexture();
+    t.repeat.set(gSize / 9.6, gSize / 9.6);
+    setAnisotropy(t, aniso);
+    ground = new THREE.Mesh(new THREE.PlaneGeometry(gSize, gSize), D(new THREE.MeshLambertMaterial({ map: t }), 'stone', { size: 3.2, albedo: 0.12, bump: 0.25, planar: true, coarse: 0.18 }));
+    ground.receiveShadow = true;
   } else if (themeId === 'garden') {
     const t = grassTexture();
     t.repeat.set(gSize / 34, gSize / 34);
@@ -681,7 +692,11 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
   const scen = buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, blocked);
   for (const m of scen.meshes) {
     root.add(m);
-    keep(m.geometry, m.material);
+    m.traverse((o) => {
+      if (o.isInstancedMesh) keep(o);
+      if (o.geometry) keep(o.geometry);
+      if (o.material) keep(o.material);
+    });
   }
   if (scen.update) updaters.push(scen.update);
 
@@ -1648,6 +1663,8 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
       balloons.instanceMatrix.needsUpdate = true;
     });
     meshes.push(balloons);
+  } else if (themeId === 'park') {
+    buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, updates, blocked, blink: blinkLight, n });
   } else if (themeId === 'garden') {
     // Riesengarten: die Spielzeugbahn ist winzig – Bäume, Grashalme, Blumen, Teich, Bauklötze, Bälle, Zaun
     const plantB = new GeoBuilder(false, true);
@@ -2159,6 +2176,7 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
     lava: ['stone', { size: 2.4, albedo: 0.22, bump: 0.4 }],
     neon: ['grain', { size: 1.2, albedo: 0.08, bump: 0.06 }],
     garden: ['grain', { size: 0.8, albedo: 0.08, bump: 0.08 }],
+    park: ['grain', { size: 0.9, albedo: 0.08, bump: 0.07 }],
   };
   const sd = SOLID_DET[themeId] || SOLID_DET.neon;
   if (solid.count) meshes.push(new THREE.Mesh(solid.build(), D(themeId === 'canyon' ? strataMaterial() : new THREE.MeshLambertMaterial({ vertexColors: true }), sd[0], sd[1])));

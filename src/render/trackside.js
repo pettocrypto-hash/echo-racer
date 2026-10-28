@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import { GeoBuilder, BASIC } from './geo.js';
-import { chevronTexture, bannerTexture, sponsorAtlas, SPONSOR_IDS } from './textures.js';
+import { chevronTexture, bannerTexture, sponsorAtlas, SPONSOR_IDS, SPONSOR_ROWS } from './textures.js';
 
 const FRAME = '#2a2633';
 
@@ -466,7 +466,7 @@ function mergeGeos(list) {
 // Werbebanden: lange, niedrige Tafeln auf den Leisten von Geraden und sanften Kurven mit erfundenen Sponsoren
 // (sponsorAtlas); die Marke der jeweiligen Welt kommt öfter vor. Nachts hinterleuchtet (Leuchtkasten).
 // avoid = belegte Stellen {x, z, r} (Pfeiltafeln, Fahnenmasten) – dort keine Tafel.
-const SPONSOR_WORLD = { neon: 'nyx', canyon: 'oase', sky: 'wolke', lava: 'lavalino', garden: 'zwerg' };
+const SPONSOR_WORLD = { neon: 'nyx', canyon: 'oase', sky: 'wolke', lava: 'lavalino', garden: 'zwerg', park: 'zucker' };
 const SPONSOR_POOL = ['volt', 'kiko', 'byte', 'zed', 'mira', 'nyx', 'rune', 'juno', 'echofm', 'toffee', 'glitch', 'pops'];
 
 export function buildSponsorBoards(track, skip, parts, { RH, RW }, { themeId, night, rnd, avoid = [] }) {
@@ -512,8 +512,8 @@ export function buildSponsorBoards(track, skip, parts, { RH, RW }, { themeId, ni
     const idx = Math.max(0, SPONSOR_IDS.indexOf(id));
     const u0 = (idx % 2) * 0.5 + 0.002;
     const u1 = u0 + 0.496;
-    const vTop = 1 - (idx >> 1) / 8 - 0.004;
-    const vBot = 1 - ((idx >> 1) + 1) / 8 + 0.004;
+    const vTop = 1 - (idx >> 1) / SPONSOR_ROWS - 0.004;
+    const vBot = 1 - ((idx >> 1) + 1) / SPONSOR_ROWS + 0.004;
     let prev = null;
     for (let i = 0; i <= SEG; i++) {
       const t = i / SEG;
