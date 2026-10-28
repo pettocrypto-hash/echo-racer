@@ -30,10 +30,44 @@ function beam(b, a, c, w, color, k = 1, d = w) {
 }
 
 const lambert = () => new THREE.MeshLambertMaterial({ vertexColors: true });
-const basic = () => new THREE.MeshBasicMaterial({ vertexColors: true });
+
+// Lauflichter: Glühbirnen leuchten in Wellen nacheinander auf (Attribut aPhase je Birne)
+function chaseMaterial(uTime) {
+  const m = new THREE.MeshBasicMaterial({ vertexColors: true });
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = uTime;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aPhase;\nuniform float uTime;\nvarying float vChase;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvChase = 0.4 + 0.6 * smoothstep(0.25, 0.6, fract(aPhase - uTime * 0.8));');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying float vChase;')
+      .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb *= vChase;');
+  };
+  m.customProgramCacheKey = () => 'echo-racer-chase';
+  return m;
+}
+class Bulbs {
+  constructor() {
+    this.b = new GeoBuilder();
+    this.ph = [];
+  }
+  add(geo, opts, phase = 0) {
+    const n0 = this.b.count;
+    this.b.add(geo, opts);
+    for (let i = n0; i < this.b.count; i++) this.ph.push(phase);
+  }
+  build() {
+    const g = this.b.build();
+    g.setAttribute('aPhase', new THREE.Float32BufferAttribute(this.ph, 1));
+    return g;
+  }
+}
 
 export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, updates, blocked, blink, n }) {
   const L = track.length;
+  const uChase = { value: 0 };
+  const chase = chaseMaterial(uChase);
+  updates.push((t) => (uChase.value = t));
   const mir = track.def.mirror ? -1 : 1;
   const taken = [];
   const free = (x, z, r) => !blocked(x, z, r) && !taken.some((t) => Math.hypot(t.x - x, t.z - z) < t.r + r);
@@ -83,7 +117,7 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
     add(frame.build(), lambert(), fg);
     // drehendes Rad: Felgen, Speichen, Querstreben; Lichter auf der Felge
     const wheel = new GeoBuilder();
-    const wl = new GeoBuilder();
+    const wl = new Bulbs();
     const SEG = 32;
     for (const z of [-1.4, 1.4]) {
       for (let i = 0; i < SEG; i++) {
@@ -92,8 +126,8 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
         beam(wheel, [Math.cos(a0) * R, Math.sin(a0) * R, z], [Math.cos(a1) * R, Math.sin(a1) * R, z], 0.45, '#ff4f9e');
         beam(wheel, [Math.cos(a0) * R * 0.62, Math.sin(a0) * R * 0.62, z], [Math.cos(a1) * R * 0.62, Math.sin(a1) * R * 0.62, z], 0.3, '#ffffff');
         if (i % 2 === 0) beam(wheel, [0, 0, z], [Math.cos(a0) * R, Math.sin(a0) * R, z], 0.22, '#ffffff');
-        wl.add(BASIC.box, { x: Math.cos(a0) * R, y: Math.sin(a0) * R, z: z * 1.25, sx: 0.32, sy: 0.32, sz: 0.32, color: BULBS[i % BULBS.length], k: 3.2 });
-        wl.add(BASIC.box, { x: Math.cos(a0 + Math.PI / SEG) * R * 0.62, y: Math.sin(a0 + Math.PI / SEG) * R * 0.62, z: z * 1.25, sx: 0.24, sy: 0.24, sz: 0.24, color: BULBS[(i + 2) % BULBS.length], k: 2.6 });
+        wl.add(BASIC.box, { x: Math.cos(a0) * R, y: Math.sin(a0) * R, z: z * 1.25, sx: 0.32, sy: 0.32, sz: 0.32, color: BULBS[i % BULBS.length], k: 3.2 }, (i / SEG) * 4);
+        wl.add(BASIC.box, { x: Math.cos(a0 + Math.PI / SEG) * R * 0.62, y: Math.sin(a0 + Math.PI / SEG) * R * 0.62, z: z * 1.25, sx: 0.24, sy: 0.24, sz: 0.24, color: BULBS[(i + 2) % BULBS.length], k: 2.6 }, 1 - (i / SEG) * 4);
       }
     }
     for (let i = 0; i < 16; i++) {
@@ -104,13 +138,13 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
     for (let i = 0; i < 10; i++) {
       const a = (i / 10) * Math.PI * 2;
       const r = i % 2 ? 1.2 : 3;
-      wl.add(BASIC.box, { x: Math.cos(a) * r, y: Math.sin(a) * r, z: 1.9, sx: 0.5, sy: 0.5, sz: 0.2, color: '#ffd23d', k: 3 });
+      wl.add(BASIC.box, { x: Math.cos(a) * r, y: Math.sin(a) * r, z: 1.9, sx: 0.5, sy: 0.5, sz: 0.2, color: '#ffd23d', k: 3 }, i % 2 ? 0 : 0.5);
     }
     const hub = new THREE.Group();
     hub.position.set(0, H, 0);
     fg.add(hub);
     add(wheel.build(), lambert(), hub);
-    add(wl.build(), basic(), hub);
+    add(wl.build(), chase, hub);
     // Gondeln hängen immer senkrecht: eigene Instanzen, Lage je Bild berechnet
     const gb = new GeoBuilder();
     gb.add(BASIC.box, { x: 0, y: -2.2, z: 0, sx: 2.2, sy: 1.4, sz: 2.0, color: '#ffffff' });
@@ -156,7 +190,7 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
     const spin = new THREE.Group();
     g0.add(spin);
     const top = new GeoBuilder();
-    const tl = new GeoBuilder();
+    const tl = new Bulbs();
     top.add(BASIC.cyl24, { x: 0, y: 4.2, z: 0, sx: 1.4, sy: 6.6, sz: 1.4, color: '#ffd23d', smooth: true });
     // gestreiftes Kegeldach mit Zierkante
     const SEG = 24;
@@ -169,7 +203,7 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
       top.tri([0, 11.2, 0], B, A, c);
       top.tri([0, 7.6, 0], A, B, '#5a2a52');
       top.quad([B[0], 6.8, B[2]], [A[0], 6.8, A[2]], A, B, i % 2 ? '#ffd23d' : '#8a52ff');
-      tl.add(BASIC.box, { x: A[0] * 1.01, y: 6.9, z: A[2] * 1.01, sx: 0.3, sy: 0.3, sz: 0.3, color: BULBS[i % BULBS.length], k: 3 });
+      tl.add(BASIC.box, { x: A[0] * 1.01, y: 6.9, z: A[2] * 1.01, sx: 0.3, sy: 0.3, sz: 0.3, color: BULBS[i % BULBS.length], k: 3 }, (i / SEG) * 3);
     }
     top.add(BASIC.sphere, { x: 0, y: 11.5, z: 0, sx: 0.6, sy: 0.6, sz: 0.6, color: '#ffd23d', smooth: true });
     const NH = 12;
@@ -178,7 +212,7 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
       top.add(BASIC.cyl8, { x: Math.cos(a) * 7.2, y: 3.9, z: Math.sin(a) * 7.2, sx: 0.09, sy: 5.8, sz: 0.09, color: '#ffd23d' });
     }
     add(top.build(), lambert(), spin);
-    add(tl.build(), basic(), spin);
+    add(tl.build(), chase, spin);
     // Pferde: Rumpf, Hals, Kopf, Beine, Sattel – Instanzen wippen auf und ab
     const hb = new GeoBuilder();
     hb.add(BASIC.sphere, { x: 0, y: 0, z: 0, sx: 0.55, sy: 0.5, sz: 1.15, color: '#ffffff', smooth: true });
@@ -221,7 +255,7 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
     solid.add(BASIC.cyl24, { x: p.x, y: gy + 0.3, z: p.z, sx: 6, sy: 0.6, sz: 6, color: '#ffe9a8', smooth: true });
     const g0 = group(p.x, gy + 15, p.z);
     const top = new GeoBuilder();
-    const tl = new GeoBuilder();
+    const tl = new Bulbs();
     const SEG = 20;
     for (let i = 0; i < SEG; i++) {
       const a0 = (i / SEG) * Math.PI * 2;
@@ -231,7 +265,7 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
       top.tri([0, 2.6, 0], B, A, i % 2 ? '#1fa2ff' : '#fff4ea');
       top.tri([0, -0.2, 0], A, B, '#2a3a5a');
       top.quad([B[0], -0.6, B[2]], [A[0], -0.6, A[2]], A, B, '#ffd23d');
-      tl.add(BASIC.box, { x: A[0] * 1.02, y: -0.4, z: A[2] * 1.02, sx: 0.28, sy: 0.28, sz: 0.28, color: BULBS[i % BULBS.length], k: 3 });
+      tl.add(BASIC.box, { x: A[0] * 1.02, y: -0.4, z: A[2] * 1.02, sx: 0.28, sy: 0.28, sz: 0.28, color: BULBS[i % BULBS.length], k: 3 }, (i / SEG) * 2);
     }
     // Ketten + Sitze, im Flug um 35° nach außen geneigt
     const NS = 16;
@@ -247,7 +281,7 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
       top.add(BASIC.box, { x: tip[0], y: tip[1] - 0.3, z: tip[2], ry: -a, sx: 0.7, sy: 0.25, sz: 0.8, color: AWNINGS[i % AWNINGS.length][0] });
     }
     add(top.build(), lambert(), g0);
-    add(tl.build(), basic(), g0);
+    add(tl.build(), chase, g0);
     updates.push((t) => (g0.rotation.y = -t * 0.9));
   }
 
@@ -407,7 +441,7 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
     take(c.x, c.z, R + 2);
     hubs.push({ x: c.x, z: c.z, r: R + 1 });
     const tb = new GeoBuilder();
-    const tl = new GeoBuilder();
+    const tl = new Bulbs();
     const SEG = 64;
     const P = (a, r, y) => [c.x + Math.cos(a) * r, y, c.z + Math.sin(a) * r];
     for (let i = 0; i < SEG; i++) {
@@ -430,7 +464,7 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
       if (inDoor(am)) {
         tb.quad(P(a1, R - 0.06, door - 0.4), P(a0, R - 0.06, door - 0.4), P(a0, R - 0.06, door), P(a1, R - 0.06, door), '#ffd23d');
         tb.quad(P(a0, R + 0.01, door - 0.4), P(a1, R + 0.01, door - 0.4), P(a1, R + 0.01, door), P(a0, R + 0.01, door), '#ffd23d');
-        tl.add(BASIC.box, { x: c.x + Math.cos(am) * (R + 0.15), y: door - 0.2, z: c.z + Math.sin(am) * (R + 0.15), sx: 0.26, sy: 0.26, sz: 0.26, color: BULBS[i % BULBS.length], k: 3.2 });
+        tl.add(BASIC.box, { x: c.x + Math.cos(am) * (R + 0.15), y: door - 0.2, z: c.z + Math.sin(am) * (R + 0.15), sx: 0.26, sy: 0.26, sz: 0.26, color: BULBS[i % BULBS.length], k: 3.2 }, i * 0.25);
       }
       // Lichterketten von der Spitze zum Wandrand (innen)
       if (i % 4 === 0) {
@@ -438,7 +472,7 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
         const q1 = P(a0, R - 0.6, wallTop - 0.3);
         for (let k = 1; k < 12; k++) {
           const f = k / 12;
-          tl.add(BASIC.box, { x: q0[0] + (q1[0] - q0[0]) * f, y: q0[1] + (q1[1] - q0[1]) * f - Math.sin(f * Math.PI) * 1.2, z: q0[2] + (q1[2] - q0[2]) * f, sx: 0.22, sy: 0.22, sz: 0.22, color: BULBS[(k + i) % BULBS.length], k: 3 });
+          tl.add(BASIC.box, { x: q0[0] + (q1[0] - q0[0]) * f, y: q0[1] + (q1[1] - q0[1]) * f - Math.sin(f * Math.PI) * 1.2, z: q0[2] + (q1[2] - q0[2]) * f, sx: 0.22, sy: 0.22, sz: 0.22, color: BULBS[(k + i) % BULBS.length], k: 3 }, f * 1.5);
         }
       }
     }
@@ -463,13 +497,13 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
     for (const sd of [-1, 1]) {
       const m = track.posAt(sC, sd * (track.hw[track.indexAt(sC)] + RW + 3.2), {});
       beam(tb, [m.x, gy, m.z], [m.x, apex - 3, m.z], 0.55, '#d8d2e6');
-      tl.add(BASIC.box, { x: m.x, y: yT + 8, z: m.z, sx: 0.8, sy: 0.5, sz: 0.8, color: '#fff4d6', k: 3.5 });
+      tl.add(BASIC.box, { x: m.x, y: yT + 8, z: m.z, sx: 0.8, sy: 0.5, sz: 0.8, color: '#fff4d6', k: 3.5 }, 0.3);
     }
     const tent = add(tb.build(), lambert());
     tent.castShadow = true;
     tent.receiveShadow = true;
     meshes.push(tent);
-    const tentLights = add(tl.build(), basic());
+    const tentLights = add(tl.build(), chase);
     meshes.push(tentLights);
   }
 

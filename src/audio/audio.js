@@ -15,6 +15,27 @@ const STYLES = [
   { bpm: 140, chords: [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]], bass: 'triangle', lead: 'square', arp: [2, 1, 0, 1, 2, 3, 2, 1], drums: 1, oompah: true },
 ];
 
+// Figuren-Stimmen: kurze synthetische Laute je Fahrer (ohne Sprache, wie Piep-Melodien) – eigene Tonlage,
+// Klangfarbe und Formant (Vokal-Färbung) je Figur. Reihenfolge wie CHARACTERS.
+const VOICES = [
+  { f: 330, wave: 'square', form: 1900, q: 5, step: true, k: 0.75 }, // Byte: Roboter, harte Tonstufen
+  { f: 540, wave: 'sawtooth', form: 2300, q: 7, vib: 6, glide: 0.05 }, // Nyx: Katze, „Mi-au“-Gleiten
+  { f: 400, wave: 'sawtooth', form: 1500, q: 3, vib: 30, vibK: 0.06, crackle: true }, // Volt: knisterndes Summen
+  { f: 150, wave: 'sawtooth', form: 720, q: 5, vib: 4 }, // Rune: tiefe Ritterstimme
+  { f: 640, wave: 'sine', form: 2700, q: 3, vib: 7, echo: true }, // Kiko: hell, mit Weltraum-Hall
+  { f: 440, wave: 'triangle', form: 1750, q: 4, vib: 5, glide: 0.04 }, // Juno: Fliegerin, Juchzer
+  { f: 290, wave: 'sine', form: 950, q: 3, bubble: true }, // Zed: Hai, blubbernd
+  { f: 580, wave: 'triangle', form: 2450, q: 6, vib: 6 }, // Mira: Popstar, melodisch
+];
+// Tonfolgen: [Halbtöne über dem Grundton, Dauer in s]
+const LINES = {
+  joy: [[0, 0.08], [7, 0.08], [12, 0.2]],
+  happy: [[0, 0.1], [9, 0.22]],
+  hit: [[6, 0.06], [-6, 0.24]],
+  win: [[0, 0.1], [4, 0.1], [7, 0.1], [12, 0.38]],
+  sad: [[3, 0.2], [0, 0.18], [-5, 0.42]],
+};
+
 export class AudioEngine {
   constructor() {
     this.ctx = null;
@@ -177,6 +198,79 @@ export class AudioEngine {
     g.connect(this.sfxGain);
     o.start(t);
     o.stop(t + dur + 0.05);
+  }
+
+  // Ausruf einer Figur (who = Index in CHARACTERS, kind = joy | happy | hit | win | sad); überlagert sich nicht
+  voice(who, kind, vol = 1, delay = 0) {
+    if (!this.ready) return;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    if (now < (this.voiceUntil || 0)) return;
+    const V = VOICES[(((who | 0) % VOICES.length) + VOICES.length) % VOICES.length];
+    const line = LINES[kind] || LINES.joy;
+    const o = ctx.createOscillator();
+    o.type = V.wave;
+    // Formant (Vokal) + etwas gedämpfter Grundklang, damit die Stimme nicht dünn klingt
+    const form = ctx.createBiquadFilter();
+    form.type = 'bandpass';
+    form.frequency.value = V.form;
+    form.Q.value = V.q;
+    const body = ctx.createBiquadFilter();
+    body.type = 'lowpass';
+    body.frequency.value = V.form * 1.6;
+    const dry = ctx.createGain();
+    dry.gain.value = 0.4;
+    const g = ctx.createGain();
+    g.gain.value = 0.0001;
+    o.connect(form);
+    form.connect(g);
+    o.connect(body);
+    body.connect(dry);
+    dry.connect(g);
+    g.connect(this.sfxGain);
+    const t0 = now + 0.02 + delay;
+    let t = t0;
+    const peak = 0.2 * vol * (V.k || 1);
+    let first = true;
+    for (const [semi, dur] of line) {
+      const f = V.f * Math.pow(2, semi / 12);
+      if (first || V.step) o.frequency.setValueAtTime(f, t);
+      else o.frequency.setTargetAtTime(f, t, V.glide || 0.02);
+      first = false;
+      g.gain.setTargetAtTime(peak, t, 0.01);
+      g.gain.setTargetAtTime(0.0001, t + dur * 0.75, 0.025);
+      if (V.bubble) this._tone('sine', f * 1.5, f * 3, 0.05, 0.05 * vol, t - now + dur * 0.3);
+      t += dur;
+    }
+    if (V.vib) {
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = V.vib;
+      const lg = ctx.createGain();
+      lg.gain.value = V.f * (V.vibK || 0.025);
+      lfo.connect(lg);
+      lg.connect(o.frequency);
+      lfo.start(t0);
+      lfo.stop(t + 0.3);
+    }
+    if (V.echo) {
+      // kurzer Hall (Rückkopplung), danach wieder abgebaut
+      const d = ctx.createDelay(0.5);
+      d.delayTime.value = 0.13;
+      const fb = ctx.createGain();
+      fb.gain.value = 0.35;
+      g.connect(d);
+      d.connect(fb);
+      fb.connect(d);
+      fb.connect(this.sfxGain);
+      setTimeout(() => {
+        d.disconnect();
+        fb.disconnect();
+      }, (t - now + 1.6) * 1000);
+    }
+    if (V.crackle) this._noise(t - t0, 0.05 * vol, 'highpass', 4000, 7000, 1, t0 - now);
+    o.start(t0);
+    o.stop(t + 0.3);
+    this.voiceUntil = t + 0.15;
   }
 
   _noise(dur, vol, type, f0, f1, q = 1, delay = 0) {

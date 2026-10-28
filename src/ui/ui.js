@@ -393,6 +393,8 @@ export class UI {
       b.addEventListener('click', () => {
         this.click();
         this.garageDriverSel = +b.dataset.d;
+        // Figur meldet sich mit ihrer Stimme
+        this.app.audio.voice(this.garageDriverSel, 'happy', 0.9, 0.05);
         gr.querySelectorAll('.drv-row button').forEach((x) => x.classList.toggle('on', x === b));
         this.app.showroomCar(this.garageSel, this.garagePaintSel, this.garageDriverSel);
       })

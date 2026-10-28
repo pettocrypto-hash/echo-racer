@@ -637,6 +637,12 @@ export class RaceSession {
     S.mult = 1;
   }
 
+  // Ausruf der Figur eines Autos (Stimme je Fahrer)
+  _say(id, kind, vol = 1, delay = 0) {
+    const c = this.sim.byId.get(id);
+    if (c) this.app.audio.voice(c.driver ?? 0, kind, vol, delay);
+  }
+
   _event(ev) {
     this.view.onEvent(ev);
     if (this.role === 'demo') return;
@@ -664,7 +670,10 @@ export class RaceSession {
           this._style(['DRIFT', 'DRIFT', 'SUPER-DRIFT', 'ULTRA-DRIFT'][ev.data] || 'DRIFT', [30, 40, 80, 160][ev.data] || 40);
           au.play('boost');
           vibrate(25);
-          if (ev.data >= 3) hud.toast('ULTRA-BOOST!', 'boost');
+          if (ev.data >= 3) {
+            hud.toast('ULTRA-BOOST!', 'boost');
+            this._say(me, 'joy', 0.9);
+          }
         }
         break;
       case 'pad':
@@ -679,6 +688,7 @@ export class RaceSession {
         if (isMe) {
           this._styleBank(true);
           au.play(kind === 'shock' || kind === 'ram' ? 'shock' : 'hit');
+          this._say(me, 'hit');
           vibrate(kind === 'shock' || kind === 'ram' ? [70, 30, 70] : [45, 30, 45]);
           if (kind === 'echo') {
             hud.toast(ev.data.owner === me ? 'DEIN EIGENES ECHO!' : `ECHO VON ${name(ev.data.owner).toUpperCase()}`, 'hit');
@@ -690,6 +700,8 @@ export class RaceSession {
           const what = { echo: 'DEIN ECHO TRIFFT', shock: 'SCHOCKWELLE TRIFFT', ram: 'GERAMMT:', clone: 'DEIN KLON BLOCKT' }[kind] || 'TREFFER:';
           hud.toast(`${what} ${name(ev.id).toUpperCase()}`, 'good');
           au.play('spark', 2);
+          // getroffener Gegner ärgert sich hörbar
+          if (Math.random() < 0.7) this._say(ev.id, 'hit', 0.55);
           if (kind === 'echo') this._style('ECHO-TREFFER', 80);
         }
         break;
@@ -698,6 +710,7 @@ export class RaceSession {
         if (isMe) {
           this._style('DURCHBRUCH', 100);
           au.play('smash');
+          this._say(me, 'joy', 0.9, 0.1);
           vibrate(20);
           hud.toast('DURCHBRUCH!', 'boost');
         }
@@ -741,6 +754,7 @@ export class RaceSession {
         if (isMe) {
           this._style('TURBOSTART', 120);
           au.play('boost');
+          this._say(me, 'joy', 0.9, 0.05);
           vibrate(40);
           hud.toast('TURBOSTART!', 'boost');
         }
@@ -765,12 +779,14 @@ export class RaceSession {
           this._style('TRICK', 120);
           au.play('boost');
           hud.toast('TRICK-LANDUNG!', 'boost');
+          this._say(me, 'joy', 0.85);
         }
         break;
       case 'hardLand':
         if (isMe) {
           this._styleBank(true);
           au.play('land');
+          this._say(me, 'hit', 0.8);
           vibrate(60);
           hud.toast('HARTE LANDUNG', 'hit');
         }
@@ -845,6 +861,7 @@ export class RaceSession {
           const c = this.sim.byId.get(me);
           if (this.mode === 'timetrial') hud.bigMessage('ZIEL!', 2200, `Beste Runde ${fmtTime(c.bestLap)}`);
           else hud.bigMessage(`ZIEL! PLATZ ${c.rank}`, 2600, fmtTime(ev.time));
+          if (this.mode !== 'timetrial') this._say(me, c.rank === 1 ? 'win' : c.rank <= 3 ? 'happy' : 'sad', 1, 0.45);
           au.play('cheer', 1.2);
           this._photoFinish(ev);
         }
@@ -872,6 +889,7 @@ export class RaceSession {
               this.app.hud.el.classList.add('hidden');
               this.app.audio.play('cheer', 1.4);
               this.app.audio.play('finish');
+              this._say(res[0].id, 'win', 1, 0.6);
               setTimeout(() => {
                 window.addEventListener('pointerdown', show);
                 window.addEventListener('keydown', show);

@@ -161,7 +161,7 @@ Legende: ✅ umgesetzt · 🔧 in Arbeit · 📋 geplant · 💡 Idee für spät
 ## 10. Sound und Musik
 
 - **Vorbild:** Fröhliche, live gespielte Musik je Strecke, Tempo-Anstieg in der letzten Runde, Jubel und Sprachausrufe der Figuren („Yahoo!"), deutliche Sounds für Drift-Stufen und Boost.
-- **ECHO RACER:** ✅ eigene Musik je Welt, ✅ schnellere Musik in der letzten Runde, ✅ Fanfare, ✅ Drift-/Boost-Sounds, ✅ Jubel. 📋 Kurze **Ausrufe** pro Figur (synthetisch, ohne Sprache – z. B. Piep-Melodien beim Jubeln).
+- **ECHO RACER:** ✅ eigene Musik je Welt, ✅ schnellere Musik in der letzten Runde, ✅ Fanfare, ✅ Drift-/Boost-Sounds, ✅ Jubel. ✅ Kurze **Ausrufe** pro Figur (synthetisch, ohne Sprache – eigene Stimme je Figur für Jubel, Ärger, Sieg und Niederlage).
 
 ---
 
