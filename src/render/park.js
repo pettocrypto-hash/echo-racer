@@ -63,7 +63,7 @@ class Bulbs {
   }
 }
 
-export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, updates, blocked, blink, n }) {
+export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, updates, blocked, blink, n, landmarks = [], sfx = null }) {
   const L = track.length;
   const uChase = { value: 0 };
   const chase = chaseMaterial(uChase);
@@ -99,6 +99,7 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
     hubs.push({ x: p.x, z: p.z, r: 16 });
     const R = 20;
     const H = R + 4.5;
+    landmarks.push({ x: p.x, y: gy + H, z: p.z, r: 48 });
     const head = p.h; // Rad dreht um die lokale z-Achse; lokale x-Achse = Fahrtrichtung der Bahn
     take(p.x, p.z, 16);
     lawn(p.x, p.z, 17);
@@ -797,6 +798,11 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
       const y = gy + 55 + Math.random() * 35;
       const col = FIREWORK[Math.floor(Math.random() * FIREWORK.length)];
       P.burst(x, y, z, 90, 26, 1.6, 2.2, col, 3.6, 4);
+      // Knall mit Schall-Laufzeit (343 m/s), leiser in der Ferne
+      if (sfx && camera) {
+        const dd = camera.position.distanceTo(_fw.set(x, y, z));
+        sfx('firework', Math.min(1, 140 / dd), dd / 343);
+      }
       if (Math.random() < 0.5) P.burst(x, y, z, 40, 13, 1.3, 1.6, FIREWORK[Math.floor(Math.random() * FIREWORK.length)], 3.6, 4);
     });
   }

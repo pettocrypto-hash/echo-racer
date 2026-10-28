@@ -100,6 +100,178 @@ export class AudioEngine {
     return s;
   }
 
+  // --- Umgebungsgeräusche je Welt: leise Schleifen unter dem Motor + gelegentliche Einzelgeräusche ---
+  startAmbience(kind) {
+    if (!this.ctx) return;
+    this.stopAmbience();
+    const ctx = this.ctx;
+    const out = ctx.createGain();
+    out.gain.value = 0.0001;
+    out.gain.setTargetAtTime(1, ctx.currentTime + 0.2, 1.2);
+    out.connect(this.sfxGain);
+    const A = { out, nodes: [], timers: [] };
+    this.amb = A;
+    const lfo = (target, rate, depth) => {
+      const l = ctx.createOscillator();
+      l.frequency.value = rate;
+      const g = ctx.createGain();
+      g.gain.value = depth;
+      l.connect(g);
+      g.connect(target);
+      l.start();
+      A.nodes.push(l);
+    };
+    // gefiltertes Rauschen (Regen, Wind, Stimmengewirr), optional wandernde Filterfrequenz und schwankende Lautstärke
+    const band = (type, f, q, vol, fRate = 0, fDepth = 0, aRate = 0, aDepth = 0) => {
+      const s = this._noiseSrc();
+      const flt = ctx.createBiquadFilter();
+      flt.type = type;
+      flt.frequency.value = f;
+      flt.Q.value = q;
+      const g = ctx.createGain();
+      g.gain.value = vol;
+      s.connect(flt);
+      flt.connect(g);
+      g.connect(out);
+      s.start(ctx.currentTime, Math.random() * 1.5);
+      A.nodes.push(s);
+      if (fRate) lfo(flt.frequency, fRate, fDepth);
+      if (aRate) lfo(g.gain, aRate, aDepth);
+    };
+    const hum = (f, vol) => {
+      const o = ctx.createOscillator();
+      o.frequency.value = f;
+      const g = ctx.createGain();
+      g.gain.value = vol;
+      o.connect(g);
+      g.connect(out);
+      o.start();
+      A.nodes.push(o);
+    };
+    // Einzelton auf den Umgebungs-Bus (Vogel, Möwe, Blubbern …)
+    const tone = (type, f0, f1, dur, vol, delay = 0, vib = 0) => {
+      const t = ctx.currentTime + delay;
+      const o = ctx.createOscillator();
+      o.type = type;
+      o.frequency.setValueAtTime(f0, t);
+      o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+      const g = ctx.createGain();
+      this._env(g, t, 0.01, vol, dur);
+      o.connect(g);
+      g.connect(out);
+      if (vib) {
+        const l = ctx.createOscillator();
+        l.frequency.value = vib;
+        const lg = ctx.createGain();
+        lg.gain.value = f0 * 0.03;
+        l.connect(lg);
+        lg.connect(o.frequency);
+        l.start(t);
+        l.stop(t + dur + 0.05);
+      }
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    };
+    const burst = (dur, vol, type, f0, f1, q, delay = 0) => {
+      const t = ctx.currentTime + delay;
+      const s = ctx.createBufferSource();
+      s.buffer = this.noise;
+      const flt = ctx.createBiquadFilter();
+      flt.type = type;
+      flt.Q.value = q;
+      flt.frequency.setValueAtTime(f0, t);
+      flt.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + dur * 0.4);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(flt);
+      flt.connect(g);
+      g.connect(out);
+      s.start(t, Math.random());
+      s.stop(t + dur + 0.05);
+    };
+    const every = (min, max, fn) => {
+      const tick = () => {
+        if (this.amb !== A) return;
+        if (this.ready) fn();
+        A.timers.push(setTimeout(tick, (min + Math.random() * (max - min)) * 1000));
+      };
+      A.timers.push(setTimeout(tick, (min + Math.random() * (max - min)) * 1000));
+    };
+    switch (kind) {
+      case 'neon': // Regen auf Plastik, Stadtbrummen, ferne Hupen
+        band('highpass', 3200, 0.5, 0.05);
+        band('bandpass', 1300, 0.6, 0.03, 0, 0, 0.17, 0.01);
+        hum(55, 0.012);
+        hum(110, 0.006);
+        every(10, 22, () => {
+          tone('square', 349, 349, 0.22, 0.006);
+          tone('square', 440, 440, 0.22, 0.004);
+        });
+        break;
+      case 'canyon': // Wüstenwind, Pfeifen in den Felsen, Geierrufe
+        band('bandpass', 520, 1.2, 0.05, 0.07, 260, 0.11, 0.02);
+        band('bandpass', 1900, 9, 0.008, 0.05, 500);
+        every(13, 26, () => {
+          tone('sawtooth', 2500, 1850, 0.55, 0.012, 0, 9);
+          tone('sawtooth', 2300, 1750, 0.5, 0.009, 0.75, 9);
+        });
+        break;
+      case 'sky': // Höhenwind und Möwen
+        band('bandpass', 900, 1, 0.04, 0.05, 400, 0.09, 0.015);
+        every(7, 15, () => {
+          tone('triangle', 1450, 1100, 0.22, 0.02, 0, 12);
+          tone('triangle', 1250, 900, 0.3, 0.018, 0.28, 12);
+        });
+        break;
+      case 'lava': // Grollen, Blubbern, Knistern
+        band('lowpass', 150, 0.8, 0.12, 0, 0, 0.21, 0.04);
+        hum(38, 0.03);
+        every(0.6, 2.2, () => tone('sine', 150 + Math.random() * 60, 60, 0.14, 0.04));
+        every(0.3, 1.1, () => burst(0.05, 0.02, 'highpass', 5000, 7000, 1));
+        break;
+      case 'garden': // Vogelgezwitscher, leichter Wind, ab und zu eine Hummel
+        band('bandpass', 700, 0.8, 0.018, 0.06, 200);
+        every(0.8, 2.6, () => {
+          const n = 2 + Math.floor(Math.random() * 4);
+          const f = 3000 + Math.random() * 1800;
+          for (let i = 0; i < n; i++) tone('sine', f * (1 + Math.random() * 0.2), f * (1.15 + Math.random() * 0.3), 0.05 + Math.random() * 0.04, 0.018, i * 0.09);
+        });
+        every(12, 24, () => tone('sawtooth', 210, 230, 0.9, 0.006, 0, 18));
+        break;
+      case 'park': // Stimmengewirr, Lachen und Jubel, Schreie von der Achterbahn
+        band('bandpass', 720, 0.9, 0.05, 0, 0, 0.29, 0.015);
+        band('bandpass', 1500, 1.2, 0.02, 0.13, 300);
+        every(6, 12, () => burst(1.3, 0.035, 'bandpass', 900, 1600, 0.8));
+        every(14, 26, () => {
+          burst(1.4, 0.03, 'bandpass', 1500, 2400, 1.5);
+          tone('triangle', 900, 1300, 1.0, 0.008, 0.1, 6);
+        });
+        break;
+      default:
+        break;
+    }
+  }
+
+  stopAmbience() {
+    if (!this.amb) return;
+    const A = this.amb;
+    this.amb = null;
+    A.timers.forEach(clearTimeout);
+    A.out.gain.setTargetAtTime(0.0001, this.ctx.currentTime, 0.3);
+    setTimeout(() => {
+      for (const n of A.nodes) {
+        try {
+          n.stop();
+        } catch {
+          /* schon gestoppt */
+        }
+      }
+      A.out.disconnect();
+    }, 1600);
+  }
+
   // --- Motor ---
   startEngine() {
     if (!this.ctx || this.engine) return;
@@ -292,9 +464,15 @@ export class AudioEngine {
     s.stop(t + dur + 0.05);
   }
 
-  play(name, k = 1) {
+  play(name, k = 1, delay = 0) {
     if (!this.ready) return;
     switch (name) {
+      case 'firework':
+        // ferner Knall + Nachknistern
+        this._tone('sine', 75, 34, 0.7, 0.22 * k, delay);
+        this._noise(0.55, 0.18 * k, 'lowpass', 500, 90, 1, delay);
+        this._noise(0.5, 0.05 * k, 'highpass', 4000, 7000, 1, delay + 0.25);
+        break;
       case 'hit':
         this._noise(0.25, 0.5 * k, 'lowpass', 1400, 300, 1);
         this._tone('sine', 120, 45, 0.25, 0.5 * k);

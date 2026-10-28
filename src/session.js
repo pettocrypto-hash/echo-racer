@@ -81,6 +81,11 @@ export class RaceSession {
       followId: this.localId || this.sim.cars[0].id,
       mode: this.role === 'demo' ? 'demo' : 'race',
     });
+    // Atmosphäre: Umgebungsgeräusche der Welt und Töne aus der Kulisse (Feuerwerk) – nicht im Menü-Hintergrund
+    if (this.role !== 'demo') {
+      app.audio.startAmbience(this.track.def.theme);
+      this.view.world.setSfx((name, k, delay) => app.audio.play(name, k, delay));
+    }
     // Solo: erst Strecken-Intro (Kamerafahrt + Namenskarte), dann Countdown; Tippen/Taste überspringt
     this.introDur = this.role === 'solo' && !opts.noIntro ? INTRO : 0;
     this.introEnd = this.introDur ? performance.now() + this.introDur * 1000 : 0;
@@ -1074,6 +1079,7 @@ export class RaceSession {
       window.removeEventListener('keydown', this._skipIntro);
     }
     this.app.audio.stopEngine();
+    if (this.role !== 'demo') this.app.audio.stopAmbience();
     this.view.dispose();
   }
 }

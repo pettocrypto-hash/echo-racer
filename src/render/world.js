@@ -704,7 +704,23 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
   keep(ground.geometry, ground.material);
 
   // --- Kulisse ---
-  const scen = buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, blocked);
+  // Ton-Rückruf (z. B. Feuerwerk): setzt die Rennsitzung über setSfx, im Menü-Hintergrund bleibt es still
+  let sfxFn = null;
+  const sfx = (name, k, delay) => sfxFn && sfxFn(name, k, delay);
+  const scen = buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, blocked, sfx);
+  const landmarks = (scen.landmarks || []).filter(Boolean).map((m) => {
+    // nächster Streckenpunkt (auch für weit entfernte Wahrzeichen)
+    let bk = 0;
+    let bd = Infinity;
+    for (let k = 0; k < track.n; k += 2) {
+      const d2 = (track.px[k] - m.x) ** 2 + (track.pz[k] - m.z) ** 2;
+      if (d2 < bd) {
+        bd = d2;
+        bk = k;
+      }
+    }
+    return { ...m, s: bk * track.step, a0: Math.atan2(track.pz[bk] - m.z, track.px[bk] - m.x) };
+  });
   for (const m of scen.meshes) {
     root.add(m);
     m.traverse((o) => {
@@ -739,6 +755,10 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
     groundY: gy,
     envMap: envRT ? envRT.texture : null,
     dirLight: dir,
+    landmarks,
+    setSfx(fn) {
+      sfxFn = fn;
+    },
     setShadowSize,
     setStartLights,
     setParticles(P) {
@@ -1147,8 +1167,10 @@ function billboardMaterial() {
   });
 }
 
-function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, blocked) {
+function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, blocked, sfx) {
   const meshes = [];
+  // Wahrzeichen der Welt für die Kamerafahrt im Strecken-Intro: { x, y, z, r } (Kreisfahrt) oder kind 'view' (Ferne)
+  const landmarks = [];
   const cx = (track.bounds.minX + track.bounds.maxX) / 2;
   const cz = (track.bounds.minZ + track.bounds.maxZ) / 2;
   const radius = Math.max(track.bounds.maxX - track.bounds.minX, track.bounds.maxZ - track.bounds.minZ) / 2;
@@ -1176,6 +1198,7 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
   };
 
   if (themeId === 'neon') {
+    let tallest = null;
     // Plastik-Hochhäuser mit Fenstern, Leuchtkanten und Werbetafeln
     const bld = new GeoBuilder(true);
     const bb = { pos: [], uv: [], seed: [] };
@@ -1191,6 +1214,7 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
       const h = 16 + Math.pow(rnd(), 1.6) * (q.d > 80 ? 110 : 60);
       const shade = ['#3a2a8f', '#52309e', '#2c3a9c', '#7a2a8e', '#2a2f6b', '#1f6a8a'][Math.floor(rnd() * 6)];
       bld.uvBox(x, gy + h / 2, z, w, h, d, shade, 16, 32);
+      if (q.d < 140 && (!tallest || h > tallest.h)) tallest = { x, z, h, w: Math.max(w, d) };
       foot.push([x, z, w / 2, d / 2]);
       if (rnd() < 0.6) glow.box(x, gy + h + 0.3, z, w + 0.4, 0.5, d + 0.4, ['#ff3dd0', '#2ce7ff', '#ffd23d', '#9b6bff'][Math.floor(rnd() * 4)], 2.4);
       let roof = h;
@@ -1272,6 +1296,7 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
       else if (h > 120) blinkLight(x, gy + h + 1.5, z, 3.2);
     });
     // Straßenverkehr auf dem Spielteppich: Straßen liegen alle 45 m (x ≡ 37,5 | 82,5 und z ≡ 7,5 | 52,5 mod 90),
+    if (tallest) landmarks.push({ x: tallest.x, y: gy + tallest.h * 0.62, z: tallest.z, r: Math.max(55, tallest.h * 0.85) + tallest.w });
     // Autos fahren rechts, nur auf Stücken ohne Hochhaus, und wachsen an den Enden weich ein/aus
     {
       const R = 380;
@@ -1420,10 +1445,10 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
       solid.add(BASIC.ico1, { x, y: gy + sy * 0.35, z, sx, sy, sz, ry: rnd() * 6, color: pick() });
       placed++;
     }
-    // Schluchtwände an engen Stellen (vom Boden bis über die Bahn)
+    // Schluchtwände an engen Stellen (vom Boden bis über die Bahn); eng = halbe Breite ≤ 6,65 m (nach der Verbreiterung)
     for (let s = 0; s < track.length; s += 6) {
       const k = track.indexAt(s);
-      if (track.hw[k] > 5.3) continue;
+      if (track.hw[k] > 6.65) continue;
       for (const side of [-1, 1]) {
         const r = 4 + rnd() * 3;
         const p = track.posAt(s, side * (track.hw[k] + 1.8 + r), {});
@@ -1431,12 +1456,16 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
         solid.add(BASIC.ico1, { x: p.x, y: gy + 9, z: p.z, sx: r, sy: 16 + rnd() * 16, sz: r * 1.4, ry: rnd() * 6, color: pick() });
       }
     }
-    // Felsbögen über der Bahn
+    // Felsbögen über der Bahn (das erste ist das Wahrzeichen fürs Strecken-Intro)
     let arches = 0;
     for (let s = 40; s < track.length && arches < 2; s += 37) {
       const k = track.indexAt(s);
-      if (track.hw[k] > 5.3 || track.crossing[k]) continue;
+      if (track.hw[k] > 6.65 || track.crossing[k]) continue;
       const span = track.hw[k] + 4.2;
+      if (!arches) {
+        const c = track.posAt(s, 0, {});
+        landmarks.push({ x: c.x, y: c.y + 5, z: c.z, r: 30 });
+      }
       for (let i = 0; i <= 10; i++) {
         const a = (i / 10) * Math.PI;
         const p = track.posAt(s, Math.cos(a) * span, {});
@@ -1550,6 +1579,7 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
       if (grid.dist(x, z) < 45 || blocked(x, z, 40)) return;
       const r = 12 + rnd() * 26;
       const y = -10 + rnd() * 50;
+      if (r > 24 && (!landmarks.length || grid.dist(x, z) < landmarks[0].dd)) landmarks[0] = { x, y: y + 4, z, r: r * 2.6, dd: grid.dist(x, z) };
       const rock = ['#8a5aa8', '#7a4f9a', '#9a6ab8'][Math.floor(rnd() * 3)];
       solid.add(BASIC.cone7, { x, y: y - r * 0.9, z, sx: r, sy: r * 1.8, sz: r, rx: Math.PI, ry: rnd() * 6, color: rock });
       const nz = 3 + Math.floor(rnd() * 4);
@@ -1680,7 +1710,7 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
     });
     meshes.push(balloons);
   } else if (themeId === 'park') {
-    buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, updates, blocked, blink: blinkLight, n });
+    buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, updates, blocked, blink: blinkLight, n, landmarks, sfx });
   } else if (themeId === 'garden') {
     // Riesengarten: die Spielzeugbahn ist winzig – Bäume, Grashalme, Blumen, Teich, Bauklötze, Bälle, Zaun
     const plantB = new GeoBuilder(false, true);
@@ -1874,6 +1904,7 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
     for (let i = 0; i < n(3); i++) {
       const p = spot(14, 60, 7);
       if (!p) break;
+      if (!landmarks.length) landmarks.push({ x: p[0], y: gy + 5, z: p[1], r: 26 });
       const c = gloss(new GeoBuilder(false, true));
       const body = i % 2 ? '#2fae5a' : '#3f8fe0';
       c.add(BASIC.cyl24, { y: 3, sx: 3, sy: 6, sz: 3, color: body, smooth: true });
@@ -2085,6 +2116,7 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
     const vx = cx + Math.cos(va) * (radius + 650);
     const vz = cz + Math.sin(va) * (radius + 650);
     rockB.add(BASIC.cone7, { x: vx, y: gy + 170, z: vz, sx: 420, sy: 340, sz: 420, color: '#1c120f' });
+    landmarks.push({ kind: 'view', x: vx, y: gy + 300, z: vz });
     ring(n(30), radius + 380, radius + 800, (x, z) => {
       const h = 50 + rnd() * 160;
       rockB.add(BASIC.cone5, { x, y: gy + h / 2, z, sx: 40 + rnd() * 60, sy: h, sz: 40 + rnd() * 60, ry: rnd() * 6, color: '#160e0c' });
@@ -2206,6 +2238,7 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
   }
   return {
     meshes,
+    landmarks,
     update: updates.length ? (t, camera, focus, P) => updates.forEach((u) => u(t, camera, focus, P)) : null,
   };
 }

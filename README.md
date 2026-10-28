@@ -84,7 +84,7 @@ Umschalten zwischen Touch-Lenkrad und Neigung in **Einstellungen → Steuerung**
 - **Grand-Prix-Sterne:** Sieg mit ≥ 80 % der möglichen Punkte = 2 Sterne, ≥ 92 % = 3 Sterne; Platz 2–3 bekommt 1–2 Sterne. Bester Pokal je Schwierigkeit × Klasse wird gesammelt; 3 Sterne auf „Schwer“ = Erfolg *Drei Sterne*.
 
 ### Präsentation (Stil-Analyse, siehe `STIL-ANALYSE.md`)
-- **Strecken-Intro:** Kameraflug über die Strecke in drei Einstellungen (Überblick, Flug entlang der Bahn, auf das Startfeld zu) mit Namenskarte – Welt-Medaille, Weltname, Streckenname – und Modus-Abzeichen. Tippen/Taste überspringt; Neustart ohne Intro.
+- **Strecken-Intro:** Kameraflug über die Strecke in drei Einstellungen (Überblick, Kreisfahrt um das **Wahrzeichen der Welt** – Riesenrad, Felsbogen, Himmelsinsel, Riesen-Gießkanne, höchster Neon-Wolkenkratzer – bzw. Blick zum Vulkan, auf das Startfeld zu) mit Namenskarte – Welt-Medaille, Weltname, Streckenname – und Modus-Abzeichen. Tippen/Taste überspringt; Neustart ohne Intro.
 - **Porträts** aller 8 Figuren, aus den 3D-Köpfen gerendert: auf der Minikarte (statt Punkten), in der Ergebnisliste und in der Fahrerauswahl der Garage.
 - **HUD:** Platzzahl groß mit Gold-/Silber-/Bronze-Verlauf und dicker Kontur, Runden-Pille mit Zielflagge (letzte Runde gold), Zeit-Pille; große Einblendungen (3-2-1, LOS!, ZIEL!) in Gold mit Kontur.
 - **Ergebnis:** Rangliste rechts als Zeilen mit Porträt, Sieger gold, eigene Zeile hervorgehoben; links bleibt die 3D-Szene (Podest) sichtbar.
@@ -198,7 +198,7 @@ Der Build nutzt relative Pfade (`base: './'`), funktioniert also in jedem Untero
 - **Menü-Hintergrund:** ein laufendes KI-Rennen mit wechselnden Kameraeinstellungen wie bei einer TV-Übertragung (Verfolger, Seite, Front, Streckenrand, Luft, Rad-Perspektive) und Glitch-Schnitten.
 - **Mobil:** Querformat (Hinweis bei Hochformat), Vollbild + Orientierungs-Sperre (wo erlaubt), Safe-Areas, Wake Lock, Vibration.
 - **PWA:** `manifest.webmanifest` + Service Worker (wird beim Build mit allen Dateien befüllt) → offline spielbar (Solo/Zeitfahren).
-- **Audio:** Web Audio API – Motor (3 Oszillatoren + Filter, Gangwechsel), Drift-Quietschen, Effekte und je Strecke ein eigener kurzer Musik-Loop. **Figuren-Stimmen** ohne Sprache: jede der acht Figuren hat eigene Tonlage, Klangfarbe und Vokal-Färbung (Formant) – Byte piepst in Tonstufen, Nyx gleitet wie eine Katze, Volt knistert, Rune klingt tief, Kiko hallt, Zed blubbert. Sie jubeln bei Turbostart, Trick, Ultra-Boost und Durchbruch, ärgern sich bei Treffern (auch getroffene Gegner), feiern oder schmollen im Ziel und melden sich bei der Auswahl in der Garage.
+- **Audio:** Web Audio API – Motor (3 Oszillatoren + Filter, Gangwechsel), Drift-Quietschen, Effekte und je Strecke ein eigener kurzer Musik-Loop. **Umgebungsgeräusche je Welt:** Regen und Stadtbrummen mit fernen Hupen (Neon), Wüstenwind und Geierrufe (Canyon), Höhenwind und Möwen (Wolken), Grollen, Blubbern und Knistern (Lava), Vogelgezwitscher und Hummeln (Garten), Stimmengewirr, Lachen und Achterbahn-Jubel (Lunapark); das Feuerwerk knallt mit Schall-Laufzeit. **Figuren-Stimmen** ohne Sprache: jede der acht Figuren hat eigene Tonlage, Klangfarbe und Vokal-Färbung (Formant) – Byte piepst in Tonstufen, Nyx gleitet wie eine Katze, Volt knistert, Rune klingt tief, Kiko hallt, Zed blubbert. Sie jubeln bei Turbostart, Trick, Ultra-Boost und Durchbruch, ärgern sich bei Treffern (auch getroffene Gegner), feiern oder schmollen im Ziel und melden sich bei der Auswahl in der Garage.
 
 ### Projektstruktur
 

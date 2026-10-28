@@ -653,12 +653,27 @@ export class RaceView {
       cam.lookAt(cx, 0, cz);
       this.cam.fov = 52;
     } else if (shot === 1) {
-      const s = L * 0.4 + e * 70;
-      const p = tr.posAt(s, 0, Q0);
-      const q = tr.posAt(s + 34, 0, Q1);
-      cam.position.set(p.x + p.nx * 5, p.y + 6.5, p.z + p.nz * 5);
-      cam.lookAt(q.x, q.y + 1, q.z);
-      this.cam.fov = 58;
+      const m = this.world.landmarks && this.world.landmarks[0];
+      if (m && m.kind === 'view') {
+        // Wahrzeichen in der Ferne (Vulkan): vom nächsten Streckenpunkt aus, Blick schwenkt langsam nach oben
+        const p = tr.posAt(m.s, 0, Q0);
+        cam.position.set(p.x, p.y + 5 + e * 2, p.z);
+        cam.lookAt(m.x, lerp(p.y + 10, m.y, 0.35 + e * 0.4), m.z);
+        this.cam.fov = 50;
+      } else if (m) {
+        // Kreisfahrt um das Wahrzeichen der Welt (Riesenrad, Felsbogen, Insel, Gießkanne, Hochhaus), Kamera auf der Streckenseite
+        const a = m.a0 + (e - 0.5) * 1.1;
+        cam.position.set(m.x + Math.cos(a) * m.r, m.y + m.r * 0.22, m.z + Math.sin(a) * m.r);
+        cam.lookAt(m.x, m.y, m.z);
+        this.cam.fov = 52;
+      } else {
+        const s = L * 0.4 + e * 70;
+        const p = tr.posAt(s, 0, Q0);
+        const q = tr.posAt(s + 34, 0, Q1);
+        cam.position.set(p.x + p.nx * 5, p.y + 6.5, p.z + p.nz * 5);
+        cam.lookAt(q.x, q.y + 1, q.z);
+        this.cam.fov = 58;
+      }
     } else {
       // von hinten über das Startfeld auf den Startbogen zu (Schriftzug lesbar)
       const p = tr.posAt(-52 + e * 16, 2.5, Q0);
