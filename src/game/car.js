@@ -51,6 +51,19 @@ export function unpackState(arr, dst) {
   return dst;
 }
 
+// Lenkhilfe (Einstellung): schaut gut eine halbe Sekunde voraus; droht die Bande, lenkt sie sanft zur Bahnmitte
+// zurück. Die Hilfe wird zum Lenkeinschlag addiert (der Spieler behält die Kontrolle), im Drift schwächer.
+const AP = {};
+export function assistSteer(c, track, steer, drifting = false) {
+  if (c.air || c.spd < 6) return steer;
+  const look = 3 + c.spd * 0.5;
+  track.project(c.x + Math.sin(c.h) * look, c.z + Math.cos(c.h) * look, c.seg, AP);
+  const over = Math.abs(AP.d) - (AP.hw - CAR_HALF_W - 1.4);
+  if (over <= 0) return steer;
+  // Bande rechts (d > 0) → nach links lenken (steer < 0)
+  return clamp(steer - Math.sign(AP.d) * Math.min(1, over / 2.5) * (drifting ? 0.45 : 0.9), -1, 1);
+}
+
 export function neutralInput() {
   return { steer: 0, throttle: 0, brake: 0, drift: 0, hack: -1 };
 }

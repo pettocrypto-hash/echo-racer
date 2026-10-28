@@ -5,6 +5,7 @@
 
 import * as THREE from 'three';
 import { GeoBuilder, BASIC } from './geo.js';
+import { crowdMaterial, BODY_COLS, SKIN } from './trackside.js';
 
 const RH = 0.7; // Leistenhöhe (wie in world.js)
 const RW = 0.5;
@@ -53,10 +54,15 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
     return g;
   };
   const lawn = (x, z, r) => solid.add(BASIC.cyl24, { x, y: gy + 0.04, z, sx: r, sy: 0.08, sz: r, color: '#3f8f3c', smooth: true });
+  // Fahrgeschäfte als Knoten für Wege und Warteschlangen; wartende Besucher (stehen) und Spaziergänger (laufen)
+  const hubs = [];
+  const waiting = [];
+  const walkers = [];
 
   // ---------- Riesenrad am Infield der Startgeraden, Radebene parallel zur Bahn ----------
   {
     const p = beside(0.06, -46);
+    hubs.push({ x: p.x, z: p.z, r: 16 });
     const R = 20;
     const H = R + 4.5;
     const head = p.h; // Rad dreht um die lokale z-Achse; lokale x-Achse = Fahrtrichtung der Bahn
@@ -139,6 +145,7 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
   // ---------- Karussell mit Pferden in der Tasche der S-Kurve ----------
   {
     const p = beside(0.53, 44);
+    hubs.push({ x: p.x, z: p.z, r: 13 });
     take(p.x, p.z, 13);
     lawn(p.x, p.z, 14);
     const base = new GeoBuilder();
@@ -207,6 +214,7 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
   // ---------- Kettenkarussell außen an der Haarnadel ----------
   {
     const p = beside(0.38, 40);
+    hubs.push({ x: p.x, z: p.z, r: 11 });
     take(p.x, p.z, 12);
     lawn(p.x, p.z, 12);
     solid.add(BASIC.cyl12, { x: p.x, y: gy + 7.5, z: p.z, sx: 0.8, sy: 15, sz: 0.8, color: '#f2eefc', smooth: true });
@@ -247,6 +255,7 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
   {
     const p = beside(0.7, 34);
     const H = 48;
+    hubs.push({ x: p.x, z: p.z, r: 7 });
     take(p.x, p.z, 8);
     lawn(p.x, p.z, 9);
     solid.add(BASIC.box, { x: p.x, y: gy + H / 2, z: p.z, sx: 2.6, sy: H, sz: 2.6, color: '#2a2440' });
@@ -324,6 +333,7 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
     {
       const p0 = pts[Math.round(NP * 0.75)];
       solid.add(BASIC.box, { x: p0.x, y: gy + 1, z: p0.z, sx: 6, sy: 2, sz: 6, color: '#8a52ff' });
+      hubs.push({ x: p0.x, z: p0.z, r: 5 });
     }
     // Zug: 4 Wagen; Tempo nach Höhe (unten schnell, oben langsam), Lage am Pfad entlang
     const wb = new GeoBuilder();
@@ -395,6 +405,7 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
     const angDist = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
     const inDoor = (a) => angDist(a, aIn) < half || angDist(a, aOut) < half;
     take(c.x, c.z, R + 2);
+    hubs.push({ x: c.x, z: c.z, r: R + 1 });
     const tb = new GeoBuilder();
     const tl = new GeoBuilder();
     const SEG = 64;
@@ -460,6 +471,110 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
     meshes.push(tent);
     const tentLights = add(tl.build(), basic());
     meshes.push(tentLights);
+  }
+
+  // ---------- Wege zwischen den Fahrgeschäften: Laternen, Bänke, Blumenbeete, Warteschlangen ----------
+  {
+    const PW = 4; // Wegbreite
+    const pairs = new Set();
+    const segs = [];
+    hubs.forEach((a, i) => {
+      const near = hubs.map((b, j) => ({ j, d: Math.hypot(b.x - a.x, b.z - a.z) })).filter((o) => o.j !== i).sort((u, v) => u.d - v.d);
+      for (const o of near.slice(0, 2)) pairs.add(i < o.j ? i + ',' + o.j : o.j + ',' + i);
+    });
+    for (const key of pairs) {
+      const [i, j] = key.split(',').map(Number);
+      const a = hubs[i];
+      const b = hubs[j];
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const len = Math.hypot(dx, dz);
+      if (len < a.r + b.r + 8 || len > 260) continue;
+      const ux = dx / len;
+      const uz = dz / len;
+      const s0 = a.r + 1;
+      const s1 = len - b.r - 1;
+      // nicht durch andere Fahrgeschäfte
+      let clear = true;
+      for (let s = s0; s <= s1 && clear; s += 3) {
+        const x = a.x + ux * s;
+        const z = a.z + uz * s;
+        if (hubs.some((h, k) => k !== i && k !== j && Math.hypot(h.x - x, h.z - z) < h.r + PW)) clear = false;
+      }
+      if (!clear) continue;
+      segs.push({ ax: a.x + ux * s0, az: a.z + uz * s0, bx: a.x + ux * s1, bz: a.z + uz * s1, ux, uz, len: s1 - s0 });
+    }
+    for (const g of segs) {
+      const nx = -g.uz * (PW / 2);
+      const nz = g.ux * (PW / 2);
+      const Y = gy + 0.03;
+      solid.quad([g.ax + nx, Y, g.az + nz], [g.bx + nx, Y, g.bz + nz], [g.bx - nx, Y, g.bz - nz], [g.ax - nx, Y, g.az - nz], '#d9c3a0');
+      solid.quad([g.ax - nx, Y, g.az - nz], [g.bx - nx, Y, g.bz - nz], [g.bx + nx, Y, g.bz + nz], [g.ax + nx, Y, g.az + nz], '#d9c3a0');
+      // Wegkante
+      for (const e of [-1, 1]) {
+        beam(solid, [g.ax + nx * e * 1.05, gy + 0.08, g.az + nz * e * 1.05], [g.bx + nx * e * 1.05, gy + 0.08, g.bz + nz * e * 1.05], 0.2, '#a8927a');
+      }
+      for (let s = 2; s < g.len; s += 3) take(g.ax + g.ux * s, g.az + g.uz * s, 2.4);
+      // Laternen (abwechselnd links/rechts), Bänke, Mülleimer
+      let side = 1;
+      for (let s = 6; s < g.len - 4; s += 15, side = -side) {
+        const x = g.ax + g.ux * s - g.uz * side * 2.7;
+        const z = g.az + g.uz * s + g.ux * side * 2.7;
+        if (blocked(x, z, 0.5)) continue;
+        solid.add(BASIC.cyl8, { x, y: gy + 2.1, z, sx: 0.09, sy: 4.2, sz: 0.09, color: '#2a2440' });
+        solid.add(BASIC.cone7, { x, y: gy + 4.55, z, sx: 0.42, sy: 0.35, sz: 0.42, color: '#2a2440' });
+        glow.add(BASIC.sphere, { x, y: gy + 4.2, z, sx: 0.3, sy: 0.36, sz: 0.3, color: '#ffe2a8', k: 3.2, smooth: true });
+        if (s + 7 < g.len - 4) {
+          const bx = g.ax + g.ux * (s + 7) - g.uz * side * 2.6;
+          const bz = g.az + g.uz * (s + 7) + g.ux * side * 2.6;
+          const ry = Math.atan2(g.ux, g.uz);
+          solid.box(bx, gy + 0.45, bz, 1.8, 0.1, 0.5, '#b98d63', 1, ry);
+          solid.box(bx - g.uz * side * 0.25, gy + 0.75, bz + g.ux * side * 0.25, 1.8, 0.45, 0.08, '#b98d63', 1, ry);
+          for (const e of [-0.75, 0.75]) solid.box(bx + g.ux * e, gy + 0.22, bz + g.uz * e, 0.08, 0.45, 0.45, '#2a2440', 1, ry);
+        }
+      }
+      // Spaziergänger auf diesem Weg
+      const nw = Math.max(1, Math.round((g.len / 22) * Math.min(1, det)));
+      for (let i = 0; i < nw; i++) walkers.push({ g, s: rnd() * g.len, v: (0.9 + rnd() * 0.7) * (rnd() < 0.5 ? -1 : 1), off: (rnd() - 0.5) * 2.4, ph: rnd() * 10, sc: 0.85 + rnd() * 0.3 });
+    }
+    // Blumenbeete und Warteschlangen an den Fahrgeschäften (Richtung: zum nächsten Weg)
+    const FLOWERS = ['#ff5fa8', '#ffd23d', '#ffffff', '#ff4a4a', '#c8a8ff'];
+    hubs.forEach((h, i) => {
+      const g = segs.find((q) => Math.hypot(q.ax - h.x, q.az - h.z) < h.r + 3 || Math.hypot(q.bx - h.x, q.bz - h.z) < h.r + 3);
+      let ux;
+      let uz;
+      if (g) {
+        const fromA = Math.hypot(g.ax - h.x, g.az - h.z) < h.r + 3;
+        ux = fromA ? g.ux : -g.ux;
+        uz = fromA ? g.uz : -g.uz;
+      } else {
+        const a = rnd() * Math.PI * 2;
+        ux = Math.cos(a);
+        uz = Math.sin(a);
+      }
+      // Beet neben dem Weganfang
+      const bx = h.x + ux * (h.r + 3) - uz * 4.4;
+      const bz = h.z + uz * (h.r + 3) + ux * 4.4;
+      if (!blocked(bx, bz, 1.8)) {
+        solid.add(BASIC.cyl24, { x: bx, y: gy + 0.2, z: bz, sx: 1.7, sy: 0.4, sz: 1.7, color: '#a8927a', smooth: true });
+        solid.add(BASIC.cyl24, { x: bx, y: gy + 0.42, z: bz, sx: 1.5, sy: 0.06, sz: 1.5, color: '#5a3a2a', smooth: true });
+        for (let k = 0; k < 14; k++) {
+          const a = rnd() * Math.PI * 2;
+          const r = Math.sqrt(rnd()) * 1.25;
+          solid.add(BASIC.sphere, { x: bx + Math.cos(a) * r, y: gy + 0.62, z: bz + Math.sin(a) * r, sx: 0.16, sy: 0.16, sz: 0.16, color: FLOWERS[k % FLOWERS.length] });
+        }
+      }
+      // Warteschlange: Reihe am Weg, mit Absperrband-Pfosten
+      if (i === hubs.length - 1) return; // Zelt: keine Schlange
+      const q0 = h.r + 1.2;
+      for (let k = 0; k < 7; k++) {
+        const x = h.x + ux * (q0 + k * 0.9) + uz * 1.2;
+        const z = h.z + uz * (q0 + k * 0.9) - ux * 1.2;
+        if (rnd() < 0.85) waiting.push([x, z, 0.85 + rnd() * 0.3]);
+        if (k % 2 === 0) solid.add(BASIC.cyl8, { x: x + uz * 0.7, y: gy + 0.45, z: z - ux * 0.7, sx: 0.06, sy: 0.9, sz: 0.06, color: '#d8c070' });
+      }
+      beam(solid, [h.x + ux * q0 + uz * 1.9, gy + 0.85, h.z + uz * q0 - ux * 1.9], [h.x + ux * (q0 + 6) + uz * 1.9, gy + 0.85, h.z + uz * (q0 + 6) - ux * 1.9], 0.05, '#e8323c');
+    });
   }
 
   // ---------- Lichterketten quer über die Bahn ----------
@@ -529,6 +644,11 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
       // Schild auf dem Dach
       solid.box(p.x - sn * 0.2, gy + 3.9, p.z - cs * 0.2, 3.0, 0.9, 0.2, c1, 1, ry);
       glow.add(BASIC.box, { x: W(0, 3.9, -0.05)[0], y: gy + 3.9, z: W(0, 3.9, -0.05)[2], ry, sx: 2.4, sy: 0.35, sz: 0.25, color: '#fff4d6', k: 2.2 });
+      // Kundschaft vor der Theke
+      for (let i = 0; i < 2; i++) if (rnd() < 0.7) {
+        const q = W(-0.9 + i * 1.6 + (rnd() - 0.5) * 0.4, 0, 2.9 + rnd() * 0.5);
+        waiting.push([q[0], q[2], 0.85 + rnd() * 0.3]);
+      }
       // Ware: bunte Kugeln (Zuckerwatte, Ballons, Bonbons) auf der Theke
       for (let i = 0; i < 4; i++) {
         const q = W(-1.4 + i * 0.95, 1.45, 1.4);
@@ -560,6 +680,68 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
         const a = (i / 10) * Math.PI * 2;
         glow.add(BASIC.box, { x: x + Math.cos(a) * 2.7 * s, y: gy + (4.6 + (i % 3) * 0.6) * s, z: z + Math.sin(a) * 2.7 * s, sx: 0.2, sy: 0.2, sz: 0.2, color: '#ffd27a', k: 3 });
       }
+    }
+  }
+
+  // ---------- Besucher: Wartende hüpfen ungeduldig (Tribünen-Shader), Spaziergänger laufen auf den Wegen ----------
+  {
+    const bodyGeo = new THREE.CylinderGeometry(0.24, 0.28, 0.82, 10).translate(0, 0.41, 0);
+    const headGeo = new THREE.SphereGeometry(0.22, 12, 8).translate(0, 1.05, 0);
+    const M = new THREE.Matrix4();
+    const Q = new THREE.Quaternion();
+    const V = new THREE.Vector3();
+    const S = new THREE.Vector3();
+    const C = new THREE.Color();
+    if (waiting.length) {
+      const uTime = { value: 0 };
+      const mat = crowdMaterial(uTime, { value: 0 });
+      const bodies = new THREE.InstancedMesh(bodyGeo, mat, waiting.length);
+      const heads = new THREE.InstancedMesh(headGeo, mat, waiting.length);
+      waiting.forEach(([x, z, s], i) => {
+        M.compose(V.set(x, gy + 0.03, z), Q, S.setScalar(s));
+        bodies.setMatrixAt(i, M);
+        heads.setMatrixAt(i, M);
+        bodies.setColorAt(i, C.set(BODY_COLS[Math.floor(rnd() * BODY_COLS.length)]));
+        heads.setColorAt(i, C.set(SKIN[Math.floor(rnd() * SKIN.length)]));
+      });
+      bodies.frustumCulled = false;
+      heads.frustumCulled = false;
+      meshes.push(bodies, heads);
+      updates.push((t) => (uTime.value = t));
+    }
+    if (walkers.length) {
+      const mat = new THREE.MeshLambertMaterial();
+      const bodies = new THREE.InstancedMesh(bodyGeo.clone(), mat, walkers.length);
+      const heads = new THREE.InstancedMesh(headGeo.clone(), mat, walkers.length);
+      walkers.forEach((w, i) => {
+        bodies.setColorAt(i, C.set(BODY_COLS[Math.floor(rnd() * BODY_COLS.length)]));
+        heads.setColorAt(i, C.set(SKIN[Math.floor(rnd() * SKIN.length)]));
+      });
+      bodies.frustumCulled = false;
+      heads.frustumCulled = false;
+      meshes.push(bodies, heads);
+      let last = null;
+      updates.push((t) => {
+        const dt = last == null ? 0 : Math.min(0.1, Math.max(0, t - last));
+        last = t;
+        walkers.forEach((w, i) => {
+          w.s += w.v * dt;
+          // am Wegende umdrehen
+          if (w.s < 0 || w.s > w.g.len) {
+            w.v = -w.v;
+            w.s = Math.max(0, Math.min(w.g.len, w.s));
+          }
+          const g = w.g;
+          const x = g.ax + g.ux * w.s - g.uz * w.off;
+          const z = g.az + g.uz * w.s + g.ux * w.off;
+          const bob = Math.abs(Math.sin(t * 7 + w.ph)) * 0.08;
+          M.compose(V.set(x, gy + 0.03 + bob, z), Q, S.setScalar(w.sc));
+          bodies.setMatrixAt(i, M);
+          heads.setMatrixAt(i, M);
+        });
+        bodies.instanceMatrix.needsUpdate = true;
+        heads.instanceMatrix.needsUpdate = true;
+      });
     }
   }
 

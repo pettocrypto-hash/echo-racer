@@ -14,6 +14,7 @@ const DEFAULTS = {
   tiltCal: 0,
   tiltInvert: false,
   autoGas: true,
+  assist: false, // Lenkhilfe: hält von der Bande fern
   quality: 'auto', // 'auto' | 'high' | 'mid' | 'low'
   dprCap: 2.5,
   showFps: false,

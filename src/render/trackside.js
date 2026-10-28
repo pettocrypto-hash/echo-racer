@@ -49,7 +49,7 @@ export function buildChevrons(track, skip, parts, { RH, RW }) {
 }
 
 // Shader-Zusatz: Figuren hüpfen (je Instanz eigene Phase), Fahnen wehen
-function crowdMaterial(uTime, uCheer) {
+export function crowdMaterial(uTime, uCheer) {
   const m = new THREE.MeshLambertMaterial();
   m.onBeforeCompile = (sh) => {
     sh.uniforms.uTime = uTime;
@@ -98,8 +98,8 @@ function flagMaterial(uTime) {
   return m;
 }
 
-const BODY_COLS = ['#ff3b5c', '#ffd23d', '#2ce7ff', '#7dff5a', '#ff7a1f', '#a585ff', '#ffffff', '#ff5fd0', '#3d7bff'];
-const SKIN = ['#ffd9b8', '#f1c27d', '#c68642', '#8d5524', '#ffe0c4', '#e0ac69'];
+export const BODY_COLS = ['#ff3b5c', '#ffd23d', '#2ce7ff', '#7dff5a', '#ff7a1f', '#a585ff', '#ffffff', '#ff5fd0', '#3d7bff'];
+export const SKIN = ['#ffd9b8', '#f1c27d', '#c68642', '#8d5524', '#ffe0c4', '#e0ac69'];
 const FLAG_COLS = ['#ff3b5c', '#ffd23d', '#2ce7ff', '#ffffff', '#ff7a1f', '#a585ff'];
 
 // Tribüne an der Start-/Zielgeraden. Rückgabe null, wenn neben der Geraden kein Platz ist.
@@ -580,4 +580,150 @@ export function buildSponsorBoards(track, skip, parts, { RH, RW }, { themeId, ni
   const mesh = new THREE.Mesh(b.build(), mat);
   mesh.receiveShadow = true;
   return { mesh, spots, dispose: () => [mesh.geometry, mat].forEach((d) => d.dispose()) };
+}
+
+// Zuschauer-Balkone an der Strecke: Holzdeck neben der Außenleiste auf Bahnhöhe (folgt Hügeln und Steilkurven),
+// Stützen bis zum Boden, Geländer hinten, zwei Reihen hüpfender Steckfiguren, manche mit Fähnchen.
+// Bevorzugt an Landezonen der Schanzen, Kurvenausgängen und Boostfeldern; nicht an Start/Ziel, Kreuzungen, Toren
+// und belegten Stellen (avoid). Rückgabe null, wenn nichts passt.
+export function buildSpectators(track, skip, parts, { RH, RW }, { gy, det, rnd, avoid = [], rail = '#e8e4f0' }) {
+  const L = track.length;
+  const GL = 10; // Länge eines Balkons
+  const DW = 3.2; // Tiefe
+  const want = det < 0.5 ? 3 : det < 0.9 ? 4 : 6;
+  const DECK = '#b98d63';
+  const pos = (s, dd, side) => {
+    const hw = track.posAt(s, 0, {}).hw;
+    return track.posAt(s, side * (hw + RW + 0.25 + dd), {});
+  };
+  // Kandidaten bewerten: Landezone einer Schanze, Kurvenausgang, Boostfeld in der Nähe
+  const cands = [];
+  for (let s = 40; s < L - 90; s += 9) {
+    let score = rnd() * 0.5;
+    for (const j of track.jumps) {
+      const dd = track.deltaS(j.s, s);
+      if (dd > -6 && dd < 30) score += 3;
+    }
+    for (const cv of track.curves) {
+      const dd = track.deltaS(cv.s1, s);
+      if (dd > -8 && dd < 25) score += 1.5;
+    }
+    for (const pd of track.pads) if (Math.abs(track.deltaS(pd.s, s)) < 20) score += 1;
+    cands.push({ s, score });
+  }
+  cands.sort((a, b) => b.score - a.score);
+  const chosen = [];
+  for (const c of cands) {
+    if (chosen.length >= want) break;
+    if (chosen.some((o) => Math.abs(track.deltaS(o.s, c.s)) < 110)) continue;
+    const cw = track.curvWide[track.indexAt(c.s + GL / 2)];
+    const sides = Math.abs(cw) > 1 / 300 ? [Math.sign(cw), -Math.sign(cw)] : rnd() < 0.5 ? [1, -1] : [-1, 1];
+    for (const side of sides) {
+      let good = true;
+      for (let s = c.s - 2; s <= c.s + GL + 2 && good; s += 1) {
+        const k = track.indexAt(s);
+        if (skip(k) || track.crossing[k] || track.pads.some((pd) => Math.abs(track.deltaS(pd.s - pd.len / 2, s)) < 3)) good = false;
+      }
+      for (let s = c.s; s <= c.s + GL && good; s += 2) {
+        for (const dd of [0, DW]) {
+          const p = pos(s, dd, side);
+          if (avoid.some((a) => Math.hypot(a.x - p.x, a.z - p.z) < a.r + 1.0)) good = false;
+        }
+      }
+      if (good) {
+        chosen.push({ s: c.s, side });
+        break;
+      }
+    }
+  }
+  if (!chosen.length) return null;
+  // Flächen beidseitig (Deck ist von oben, vorn und hinten sichtbar)
+  const dbl = (a, b, c, d, col) => {
+    parts.quad(a, b, c, d, col);
+    parts.quad(d, c, b, a, col);
+  };
+  const v3 = (p, dy = 0) => [p.x, p.y + dy, p.z];
+  const spots = [];
+  const people = [];
+  const TH = 0.3;
+  for (const { s: s0, side } of chosen) {
+    const SEG = 4;
+    let prev = null;
+    for (let i = 0; i <= SEG; i++) {
+      const s = s0 + (GL * i) / SEG;
+      const f = pos(s, 0, side);
+      const b = pos(s, DW, side);
+      if (prev) {
+        dbl(v3(prev.f), v3(prev.b), v3(b), v3(f), DECK);
+        dbl(v3(prev.f, -TH), v3(prev.f), v3(f), v3(f, -TH), DECK);
+        dbl(v3(prev.b, -TH), v3(prev.b), v3(b), v3(b, -TH), DECK);
+        // Geländer hinten: Handlauf
+        dbl(v3(prev.b, 0.95), v3(prev.b, 1.05), v3(b, 1.05), v3(b, 0.95), rail);
+      }
+      if (i === 0 || i === SEG) dbl(v3(f, -TH), v3(f), v3(b), v3(b, -TH), DECK);
+      // Stützen bis zum Boden + Geländerpfosten
+      for (const q of [pos(s, 0.4, side), pos(s, DW - 0.4, side)]) {
+        const h = q.y - TH - gy;
+        if (h > 0.2 && h < 20) parts.add(BASIC.box, { x: q.x, y: gy + h / 2, z: q.z, sx: 0.22, sy: h, sz: 0.22, color: rail });
+      }
+      parts.add(BASIC.box, { x: b.x, y: b.y + 0.5, z: b.z, sx: 0.1, sy: 1.0, sz: 0.1, color: rail });
+      prev = { f, b };
+      spots.push({ x: (f.x + b.x) / 2, z: (f.z + b.z) / 2, r: 2.4 });
+    }
+    // zwei Reihen Steckfiguren
+    for (const dd of [0.9, 2.15]) {
+      for (let s = s0 + 0.6; s < s0 + GL - 0.5; s += 0.85) {
+        if (rnd() > 0.35 + 0.6 * Math.min(1, det)) continue;
+        const p = pos(s + (rnd() - 0.5) * 0.2, dd + (rnd() - 0.5) * 0.25, side);
+        people.push([p.x, p.y, p.z, 0.88 + rnd() * 0.24, rnd() < 0.3]);
+      }
+    }
+  }
+  // Instanzen: Körper, Kopf, Fähnchen (gleiche Reihenfolge → hüpfen gemeinsam)
+  const uTime = { value: 0 };
+  const uCheer = { value: 0 };
+  const mat = crowdMaterial(uTime, uCheer);
+  const bodyGeo = new THREE.CylinderGeometry(0.24, 0.28, 0.82, 10).translate(0, 0.41, 0);
+  const headGeo = new THREE.SphereGeometry(0.22, 12, 8).translate(0, 1.05, 0);
+  const fb = new GeoBuilder();
+  fb.box(0.3, 1.25, 0, 0.04, 1.1, 0.04, '#ffffff');
+  fb.box(0.3, 1.66, 0.24, 0.03, 0.3, 0.46, '#ffffff');
+  const flagGeo = fb.build();
+  const N = people.length;
+  const bodies = new THREE.InstancedMesh(bodyGeo, mat, N);
+  const heads = new THREE.InstancedMesh(headGeo, mat, N);
+  const flags = new THREE.InstancedMesh(flagGeo, mat, N);
+  const M = new THREE.Matrix4();
+  const Z = new THREE.Matrix4().makeScale(0, 0, 0);
+  const q = new THREE.Quaternion();
+  const v = new THREE.Vector3();
+  const sc = new THREE.Vector3();
+  const c = new THREE.Color();
+  const Y = new THREE.Vector3(0, 1, 0);
+  people.forEach(([x, y, z, s, flag], i) => {
+    q.setFromAxisAngle(Y, rnd() * Math.PI * 2);
+    M.compose(v.set(x, y, z), q, sc.setScalar(s));
+    bodies.setMatrixAt(i, M);
+    heads.setMatrixAt(i, M);
+    flags.setMatrixAt(i, flag ? M : Z);
+    bodies.setColorAt(i, c.set(BODY_COLS[Math.floor(rnd() * BODY_COLS.length)]));
+    heads.setColorAt(i, c.set(SKIN[Math.floor(rnd() * SKIN.length)]));
+    flags.setColorAt(i, c.set(FLAG_COLS[Math.floor(rnd() * FLAG_COLS.length)]));
+  });
+  for (const m of [bodies, heads, flags]) {
+    m.frustumCulled = false;
+    m.receiveShadow = true;
+  }
+  return {
+    objects: [bodies, heads, flags],
+    spots,
+    update: (t) => {
+      uTime.value = t;
+      uCheer.value = Math.max(0, uCheer.value - 0.004);
+    },
+    cheer: (k) => {
+      uCheer.value = Math.max(uCheer.value, k);
+    },
+    dispose: () => [bodyGeo, headGeo, flagGeo, mat, bodies, heads, flags].forEach((d) => d.dispose()),
+  };
 }

@@ -8,7 +8,7 @@ import { DT, SNAP_EVERY, COUNTDOWN, HACKS } from './config.js';
 import { Track } from './game/track.js';
 import { trackDefById, medalFor, medalTimes, MEDALS } from './game/trackDefs.js';
 import { RaceSim } from './game/sim.js';
-import { packState, unpackState, stepCar } from './game/car.js';
+import { packState, unpackState, stepCar, assistSteer } from './game/car.js';
 import { decodeEcho, encodeEcho } from './game/echo.js';
 import { H_SHOCK, H_RAM, SHOCK_R } from './game/hacks.js';
 import { RaceView } from './render/view.js';
@@ -233,6 +233,8 @@ export class RaceSession {
     const lc = this.localCar;
     if (lc && lc.kind === 'local') {
       const inp = this.app.input.poll(DT);
+      // Lenkhilfe wirkt auf die Eingabe selbst – online landet so derselbe Wert beim Host
+      if (settings.assist) inp.steer = assistSteer(lc.st, sim.track, inp.steer, !!lc.st.drift);
       lc.input.steer = inp.steer;
       lc.input.throttle = inp.throttle;
       lc.input.brake = inp.brake;

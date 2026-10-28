@@ -84,7 +84,7 @@ Legende: ✅ umgesetzt · 🔧 in Arbeit · 📋 geplant · 💡 Idee für spät
 | Windschatten | Hinter Gegnern Luftlinien, dann Schub | ✅ Windschatten (auch hinter Echos) |
 | Items | Kisten, Zufall | ❌ bewusst nicht – stattdessen **Echos + Streckenhacks** (kein Zufall) |
 | Münzen | Tempo-Bonus bis 10 | ❌ nicht übernommen; 💡 eigene Idee: „Datenchips"? (lieber nicht – zu nah) |
-| Lenkhilfe / Auto-Gas | Optionale Hilfen für Einsteiger | ✅ Auto-Gas; 📋 optionale **Lenkhilfe** (hält von Wänden fern) |
+| Lenkhilfe / Auto-Gas | Optionale Hilfen für Einsteiger | ✅ Auto-Gas; ✅ optionale **Lenkhilfe** (hält von Wänden fern) |
 | Unterwasser / Gleiten / Antigrav | Streckenabschnitte mit anderem Fahrgefühl | ❌ nicht übernommen; 💡 eigene Abschnitte: **Echo-Tunnel**, **Glitch-Zonen** |
 | Abkürzungen | Mit Boost über Gras/Rampen | 💡 Abkürzungen mit Sprungschanze |
 | Steilkurven | Geneigte Kurven, in denen man mehr Tempo halten kann | ✅ Querneigung je nach Kurvenradius (bis ≈ 13°), mehr Lenkwirkung bei Tempo, Kamera neigt sich mit |
@@ -128,6 +128,7 @@ Legende: ✅ umgesetzt · 🔧 in Arbeit · 📋 geplant · 💡 Idee für spät
 - ✅ **Kart-Details:** Carbon-Gewebe an den Anbauteilen, Reifen mit Straßenprofil, Flankenbeschriftung und Staub, Radmuttern, Startnummer-Aufkleber auf der Sitzlehne, Sponsor-Aufkleber und Heckflügel-Banner.
 - ✅ **Sponsor-Bandenwerbung** mit 16 eigenen Fantasie-Marken (VOLT, KIKO, NYX, RUNE, ECHO FM … + je Welt eine eigene) auf den Leisten, nachts hinterleuchtet.
 - ✅ **Steilkurven** in allen Welten.
+- ✅ **Zuschauer an vielen Stellen:** Balkone mit hüpfenden Steckfiguren und Fähnchen an Schanzen und Kurvenausgängen.
 - ✅ **Sechste Welt: Lunapark** am Abend – Riesenrad, Karussell, Kettenkarussell, Freifallturm, Achterbahn mit Zug, Buden, Lichterketten über der Bahn, Feuerwerk und eine Durchfahrt durch ein Zirkuszelt (eigener Streckenverlauf, eigene Rummel-Musik).
 
 ---

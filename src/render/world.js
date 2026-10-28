@@ -10,7 +10,7 @@ import {
   lavaTextures, sandTexture, textTexture, billboardAtlas, setAnisotropy, grassTexture, roadArrowTexture, pavingTexture,
 } from './textures.js';
 import { mulberry32 } from '../util.js';
-import { buildChevrons, buildGrandstand, buildBannerPoles, buildBalloons, buildSponsorBoards } from './trackside.js';
+import { buildChevrons, buildGrandstand, buildBannerPoles, buildBalloons, buildSponsorBoards, buildSpectators } from './trackside.js';
 import { JUMP_LEN } from '../config.js';
 import { addDetail } from './detail.js';
 import { buildPark } from './park.js';
@@ -581,6 +581,7 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
     keep(stand);
   }
   const blocked = (x, z, r) => blockers.some((b) => Math.hypot(b.x - x, b.z - z) < b.r + r);
+  let spectators = null;
 
   // Stoffbanner an Masten entlang der Strecke (Weltfarben) + Ballontrauben rund um Start/Ziel
   {
@@ -608,6 +609,20 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
       root.add(boards.mesh);
       keep(boards);
       blockers.push(...boards.spots);
+    }
+    // Zuschauer-Balkone an Schanzen und Kurvenausgängen
+    spectators = buildSpectators(track, skip, parts, { RH, RW }, {
+      gy,
+      det,
+      rnd: mulberry32(track.id.length * 53 + N),
+      avoid: [...chev.spots, ...(poles ? poles.spots : []), ...(boards ? boards.spots : [])],
+      rail: toy.rail,
+    });
+    if (spectators) {
+      root.add(...spectators.objects);
+      keep(spectators);
+      blockers.push(...spectators.spots);
+      updaters.push(spectators.update);
     }
     const balloons = buildBalloons(track, { RH, RW }, rnd, det);
     root.add(...balloons.objects);
@@ -732,6 +747,7 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
     // Tribüne jubeln lassen (0..1, klingt von selbst ab)
     cheer(k) {
       if (stand) stand.cheer(k);
+      if (spectators) spectators.cheer(k);
     },
     update(t, camera, focus) {
       sky.position.copy(camera.position);

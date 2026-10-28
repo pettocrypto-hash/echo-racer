@@ -428,6 +428,7 @@ export class UI {
         <div class="set"><span>Lenk-Empfindlichkeit</span><input type="range" min="0.5" max="2" step="0.05" data-set="sens"><output></output></div>
         <div class="set"><span>Neigung</span><button class="mbtn small calib">KALIBRIEREN</button><label class="chk"><input type="checkbox" data-set="tiltInvert"> umkehren</label></div>
         <div class="set"><span>Auto-Gas</span><label class="chk"><input type="checkbox" data-set="autoGas"> automatisch Gas geben</label></div>
+        <div class="set"><span>Lenkhilfe</span><label class="chk"><input type="checkbox" data-set="assist"> hält von der Bande fern</label></div>
         <div class="set"><span>Vibration</span><label class="chk"><input type="checkbox" data-set="vibration"> an</label></div>
         <div class="set wide"><span>Grafik</span>${seg('quality', [['auto', 'Auto'], ['ultra', 'Ultra (HD)'], ['high', 'Hoch'], ['mid', 'Mittel'], ['low', 'Niedrig']], settings.quality)}</div>
         <div class="set"><span>Max. Auflösung</span><input type="range" min="1" max="2.5" step="0.25" data-set="dprCap"><output></output></div>
