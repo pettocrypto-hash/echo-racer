@@ -1540,6 +1540,118 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
       });
       meshes.push(weeds);
     }
+    // Staubteufel: Sandwirbel abseits der Bahn – drehende Bänder auf einem offenen Trichter, entstehen, wandern ein
+    // Stück und vergehen, dann woanders neu
+    {
+      const spots = [];
+      for (let i = 0; i < 160 && spots.length < 8; i++) {
+        const [x, z] = randomAround(track, rnd, 110);
+        const dd = grid.dist(x, z);
+        // gut sichtbar, aber weit genug weg, dass der Wirbel nie die Bahn kreuzt
+        if (dd > 45 && dd < 100 && !blocked(x, z, 14)) spots.push([x, z]);
+      }
+      const geo = new THREE.CylinderGeometry(5, 0.4, 22, 28, 10, true);
+      geo.translate(0, 11, 0);
+      const devils = [];
+      for (let i = 0; i < Math.min(spots.length, n(3)); i++) {
+        const mat = new THREE.ShaderMaterial({
+          uniforms: { uTime: { value: 0 }, uA: { value: 0 }, uCol: { value: new THREE.Color('#d6a86e') } },
+          vertexShader: /* glsl */ `
+            varying vec2 vUv;
+            varying vec3 vN;
+            varying vec3 vV;
+            varying float vD;
+            void main() {
+              vUv = uv;
+              vec4 mv = modelViewMatrix * vec4(position, 1.0);
+              vN = normalize(normalMatrix * normal);
+              vV = normalize(-mv.xyz);
+              vD = -mv.z;
+              gl_Position = projectionMatrix * mv;
+            }`,
+          fragmentShader: /* glsl */ `
+            uniform float uTime;
+            uniform float uA;
+            uniform vec3 uCol;
+            varying vec2 vUv;
+            varying vec3 vN;
+            varying vec3 vV;
+            varying float vD;
+            void main() {
+              // schräge Wirbelbänder, die nach oben laufen und sich drehen
+              float a = vUv.x * 6.2832;
+              float b1 = sin(a * 3.0 + vUv.y * 9.0 - uTime * 7.0);
+              float b2 = sin(a * 5.0 - vUv.y * 14.0 - uTime * 11.0 + 1.3);
+              float band = smoothstep(0.05, 0.75, b1 * 0.6 + b2 * 0.4 + 0.25);
+              // unten dicht, oben ausfransend; Silhouette läuft weich aus, in der Ferne im Dunst
+              float h = smoothstep(0.0, 0.07, vUv.y) * (1.0 - smoothstep(0.5, 1.0, vUv.y));
+              float rim = smoothstep(0.05, 0.5, abs(dot(normalize(vN), normalize(vV))));
+              float far = 1.0 - smoothstep(180.0, 420.0, vD);
+              float alpha = band * h * rim * far * 0.68 * uA;
+              vec3 c = uCol * (0.78 + 0.3 * vUv.y + 0.12 * b1);
+              gl_FragColor = vec4(c, alpha);
+            }`,
+          transparent: true,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        });
+        const m = new THREE.Mesh(geo, mat);
+        m.frustumCulled = false;
+        // aufgewirbelter Sand am Fuß: flache Scheibe mit kreisenden Schlieren
+        const baseMat = new THREE.ShaderMaterial({
+          uniforms: mat.uniforms,
+          vertexShader: /* glsl */ `
+            varying vec2 vUv;
+            void main() {
+              vUv = uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }`,
+          fragmentShader: /* glsl */ `
+            uniform float uTime;
+            uniform float uA;
+            uniform vec3 uCol;
+            varying vec2 vUv;
+            void main() {
+              vec2 q = vUv * 2.0 - 1.0;
+              float r = length(q);
+              float a = atan(q.y, q.x);
+              float sw = sin(a * 4.0 + r * 9.0 - uTime * 6.0) * 0.5 + 0.5;
+              float alpha = sw * smoothstep(1.0, 0.45, r) * smoothstep(0.05, 0.3, r) * 0.55 * uA;
+              gl_FragColor = vec4(uCol * (0.85 + 0.2 * sw), alpha);
+            }`,
+          transparent: true,
+          depthWrite: false,
+        });
+        const base = new THREE.Mesh(new THREE.CircleGeometry(6.5, 32).rotateX(-Math.PI / 2), baseMat);
+        base.position.y = 0.3;
+        m.add(base);
+        meshes.push(m);
+        devils.push({ m, mat, spot: i % spots.length, ph: i / 3 + rnd() * 0.2, per: 30 + rnd() * 12, cyc: -1, ang: rnd() * 6.3 });
+      }
+      if (devils.length) {
+        updates.push((t) => {
+          for (const d of devils) {
+            const f = t / d.per + d.ph;
+            const cyc = Math.floor(f);
+            const k = f - cyc;
+            // jeder Durchgang an einer anderen Stelle
+            if (cyc !== d.cyc) {
+              d.cyc = cyc;
+              d.spot = (d.spot + 3) % spots.length;
+              d.ang = (d.ang + 2.4) % 6.3;
+            }
+            const [sx, sz] = spots[d.spot];
+            const r = 4 + k * 14;
+            d.m.position.set(sx + Math.cos(d.ang + k * 2) * r, gy, sz + Math.sin(d.ang + k * 2) * r);
+            d.m.rotation.set(Math.sin(t * 0.9 + d.ph * 5) * 0.07, t * 3, Math.cos(t * 0.7 + d.ph * 3) * 0.07);
+            const life = Math.min(1, k / 0.18) * (1 - Math.max(0, (k - 0.72) / 0.28));
+            d.m.scale.set(0.6 + life * 0.4, 0.5 + life * 0.5, 0.6 + life * 0.4);
+            d.mat.uniforms.uA.value = life;
+            d.mat.uniforms.uTime.value = t;
+          }
+        });
+      }
+    }
     // Tafelberge mit Schichten
     ring(n(24), radius + 380, radius + 900, (x, z) => {
       const r = 40 + rnd() * 80;

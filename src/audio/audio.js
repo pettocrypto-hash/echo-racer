@@ -544,6 +544,12 @@ export class AudioEngine {
   play(name, k = 1, delay = 0) {
     if (!this.ready) return;
     switch (name) {
+      case 'scooter':
+        // Autoscooter-Rums: dumpfer Gummistoß + kurzes Knistern am Stromabnehmer
+        this._tone('sine', 115, 55, 0.14, 0.3 * k, delay);
+        this._noise(0.08, 0.12 * k, 'lowpass', 700, 300, 1, delay);
+        this._noise(0.06, 0.05 * k, 'highpass', 5000, 7000, 1, delay + 0.03);
+        break;
       case 'firework':
         // ferner Knall + Nachknistern
         this._tone('sine', 75, 34, 0.7, 0.22 * k, delay);

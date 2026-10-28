@@ -561,9 +561,12 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
       const S1 = new THREE.Vector3(1, 1, 1);
       const SS = new THREE.Vector3();
       let last = null;
-      updates.push((t) => {
+      let soundT = -9;
+      updates.push((t, camera) => {
         const dt = last == null ? 0 : Math.min(0.05, Math.max(0, t - last));
         last = t;
+        // Rumsen hörbar, wenn die Kamera in der Nähe ist (mit Schall-Laufzeit)
+        const near = sfx && camera ? Math.hypot(camera.position.x - p.x, camera.position.z - p.z) : Infinity;
         for (let i = 0; i < NC; i++) {
           const c = C[i];
           c.tT -= dt;
@@ -628,6 +631,10 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
             a.v *= 0.35;
             b.v *= 0.35;
             a.bump = b.bump = 1;
+            if (near < 75 && t - soundT > 0.18) {
+              soundT = t;
+              sfx('scooter', Math.min(1, 22 / Math.max(8, near)) * Math.min(1, closing / 2.5), near / 343);
+            }
             if (a.tgt === j) a.tgt = -1;
             if (b.tgt === i) b.tgt = -1;
           }
