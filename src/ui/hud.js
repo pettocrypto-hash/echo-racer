@@ -235,13 +235,15 @@ export class HUD {
     this.app.input.touch.brake = false;
   }
 
-  bigMessage(text, ms = 1200, sub = '') {
+  // tone: Countdown im Logo-Stil ('cd-r' | 'cd-b' | 'cd-y' | 'cd-g')
+  bigMessage(text, ms = 1200, sub = '', tone = '') {
     this.big.textContent = text;
     this.bigSub.textContent = sub;
     this.bigSub.style.color = '';
-    this.big.classList.remove('pop', 'final');
+    this.big.classList.remove('pop', 'final', 'toy', 'cd-r', 'cd-b', 'cd-y', 'cd-g');
     void this.big.offsetWidth;
     this.big.classList.add('pop');
+    if (tone) this.big.classList.add('toy', tone);
     clearTimeout(this.bigTimer);
     this.bigTimer = setTimeout(() => {
       this.big.textContent = '';

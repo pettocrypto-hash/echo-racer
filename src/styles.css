@@ -1026,6 +1026,30 @@ input {
   animation: pop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1);
 }
 
+/* Countdown im Logo-Stil: 3 rot, 2 blau, 1 gelb, LOS! grün – weißer Rand, dunkle Kante */
+.big.toy {
+  -webkit-text-stroke: 0.07em #fff;
+  paint-order: stroke fill;
+  text-shadow: none;
+  filter: drop-shadow(0 0.06em 0 #160e3a) drop-shadow(0 0.1em 0.16em rgba(0, 0, 0, 0.45));
+}
+
+.big.cd-r {
+  color: var(--rot);
+}
+
+.big.cd-b {
+  color: var(--blau);
+}
+
+.big.cd-y {
+  color: var(--gelb);
+}
+
+.big.cd-g {
+  color: var(--gruen);
+}
+
 /* Letzte Runde: rot-goldenes Banner */
 .big.final {
   color: #ffd23a;

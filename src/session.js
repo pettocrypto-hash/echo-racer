@@ -676,7 +676,7 @@ export class RaceSession {
       case 'go':
         au.play('go');
         au.play('cheer', 0.8);
-        hud.bigMessage('LOS!', 700);
+        hud.bigMessage('LOS!', 700, '', 'cd-g');
         vibrate(80);
         break;
       case 'driftLvl':
@@ -983,7 +983,7 @@ export class RaceSession {
       const n = Math.ceil(-t);
       if (n !== this.lastCount && n <= 3) {
         this.lastCount = n;
-        hud.bigMessage(String(n), 900, n === 1 ? 'DRIFT BEIM LOS = TURBOSTART' : '');
+        hud.bigMessage(String(n), 900, n === 1 ? 'DRIFT BEIM LOS = TURBOSTART' : '', ['', 'cd-y', 'cd-b', 'cd-r'][n]);
         if (n === 3) {
           if (this.daily) hud.toast('★ ' + this.daily.text.toUpperCase(), 'boost');
           const rv = this.sim.cars.find((o) => o.rival);
