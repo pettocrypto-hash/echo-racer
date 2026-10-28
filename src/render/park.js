@@ -1,4 +1,4 @@
-// Lunapark-Kulisse (sechste Welt): Riesenrad, Karussell, Kettenkarussell, Freifallturm, Achterbahn mit Zug,
+// Lunapark-Kulisse (sechste Welt): Riesenrad, Karussell, Kettenkarussell, Freifallturm, Achterbahn mit Zug, Autoscooter,
 // Zirkuszelt über der Gegengeraden (die Bahn fährt hindurch), Buden mit Markisen, Lichterketten über der Bahn,
 // Bäume, Rasenflächen und Feuerwerk am Abendhimmel. Alles prozedural; die Lage der Fahrgeschäfte ist relativ zur
 // Strecke angegeben (Anteil der Runde + seitlicher Abstand) und passt daher auch zur gespiegelten Strecke.
@@ -421,6 +421,239 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
       }
       cars.instanceMatrix.needsUpdate = true;
     });
+  }
+
+  // ---------- Autoscooter-Halle neben der Bahn: Wagen kurven herum und rammen sich, Funken am Stromabnehmer ----------
+  {
+    let p = null;
+    let sd = 1;
+    for (const [u, d] of [[0.115, 30], [0.125, -30], [0.25, -30], [0.17, 32]]) {
+      const q = beside(u, d);
+      if (free(q.x, q.z, 15)) {
+        p = q;
+        sd = Math.sign(d * mir);
+        break;
+      }
+    }
+    if (p) {
+      const W = 24; // Länge (parallel zur Bahn)
+      const D = 16; // Tiefe
+      const FY = 0.54; // Fahrbahnboden
+      const CY = 7.0; // Unterkante der Decke (Stromnetz)
+      hubs.push({ x: p.x, z: p.z, r: 14 });
+      take(p.x, p.z, 15);
+      // Vorderseite (lokal +z) zur Bahn
+      const g0 = group(p.x, gy, p.z, Math.atan2(-p.nx * sd, -p.nz * sd));
+      const hb = new GeoBuilder();
+      hb.add(BASIC.box, { x: 0, y: 0.25, z: 0, sx: W + 1.2, sy: 0.5, sz: D + 1.2, color: '#4a4458' });
+      for (let i = 0; i < W / 2; i++) hb.add(BASIC.box, { x: -W / 2 + 1 + i * 2, y: FY - 0.02, z: 0, sx: 1.98, sy: 0.04, sz: D, color: i % 2 ? '#6f7486' : '#666b7c' });
+      // Prallkante rund um die Fahrfläche, gelb-schwarz
+      for (const [len, cx, cz, alongX] of [[W, 0, D / 2, true], [W, 0, -D / 2, true], [D, W / 2, 0, false], [D, -W / 2, 0, false]]) {
+        for (let i = 0; i < len; i++) {
+          const o = -len / 2 + i + 0.5;
+          hb.add(BASIC.box, { x: alongX ? o : cx, y: FY + 0.2, z: alongX ? cz : o, sx: alongX ? 1 : 0.3, sy: 0.4, sz: alongX ? 0.3 : 1, color: i % 2 ? '#2a2633' : '#ffd23d' });
+        }
+      }
+      // Stützen, Dach, Deckennetz
+      for (const x of [-W / 2, -W / 6, W / 6, W / 2]) {
+        for (const z of [-D / 2 - 0.3, D / 2 + 0.3]) {
+          hb.add(BASIC.cyl12, { x, y: (0.5 + CY) / 2, z, sx: 0.22, sy: CY - 0.5, sz: 0.22, color: '#f2eefc', smooth: true });
+          hb.add(BASIC.cyl12, { x, y: CY - 0.25, z, sx: 0.32, sy: 0.3, sz: 0.32, color: '#ffd23d', smooth: true });
+        }
+      }
+      hb.add(BASIC.box, { x: 0, y: CY + 0.35, z: 0, sx: W + 2, sy: 0.7, sz: D + 2, color: '#8a52ff' });
+      hb.add(BASIC.box, { x: 0, y: CY + 0.02, z: 0, sx: W, sy: 0.04, sz: D, color: '#2a2440' });
+      // hohe Schmuckfront über der Vorderkante, seitliche Zierbögen
+      hb.add(BASIC.box, { x: 0, y: CY + 1.9, z: D / 2 + 0.85, sx: W * 0.72, sy: 2.6, sz: 0.3, color: '#ff4f9e' });
+      for (const e of [-1, 1]) {
+        hb.add(BASIC.box, { x: e * W * 0.43, y: CY + 1.3, z: D / 2 + 0.85, sx: W * 0.14, sy: 1.4, sz: 0.28, color: '#ffd23d' });
+        hb.add(BASIC.cyl24, { x: e * W * 0.36, y: CY + 3.2, z: D / 2 + 0.85, rx: Math.PI / 2, sx: 0.9, sy: 0.3, sz: 0.9, color: '#2ce7ff', smooth: true });
+      }
+      // Rückwand mit bunten Punkten
+      hb.add(BASIC.box, { x: 0, y: (0.5 + CY) / 2, z: -D / 2 - 0.6, sx: W + 1, sy: CY - 0.5, sz: 0.3, color: '#3a2a5e' });
+      const DOTS = ['#ffd23d', '#2ce7ff', '#ff4f9e', '#7dff5a'];
+      for (let i = 0; i < 7; i++) {
+        hb.add(BASIC.cyl24, { x: -W / 2 + 2 + i * ((W - 4) / 6), y: 3.4 + (i % 2) * 1.4, z: -D / 2 - 0.42, rx: Math.PI / 2, sx: 1.1, sy: 0.1, sz: 1.1, color: DOTS[i % DOTS.length], smooth: true });
+      }
+      // Geländer vorn (Mitte offen: Eingang mit Stufe)
+      for (const e of [-1, 1]) {
+        const x0 = e * 2.2;
+        const x1 = e * (W / 2 + 0.4);
+        beam(hb, [x0, 1.55, D / 2 + 0.75], [x1, 1.55, D / 2 + 0.75], 0.08, '#f2eefc');
+        for (let x = x0; Math.abs(x) <= Math.abs(x1) + 0.01; x += e * 2) hb.add(BASIC.box, { x, y: 1.05, z: D / 2 + 0.75, sx: 0.1, sy: 1.0, sz: 0.1, color: '#f2eefc' });
+      }
+      hb.add(BASIC.box, { x: 0, y: 0.15, z: D / 2 + 1.1, sx: 4, sy: 0.3, sz: 1.0, color: '#b0a8c0' });
+      add(hb.build(), lambert(), g0);
+      // Leuchtstreifen unter der Decke, Lauflichter an Dachkante und Schmuckfront, Schild
+      const hg = new GeoBuilder();
+      for (let x = -W / 2 + 2; x <= W / 2 - 2; x += 4) hg.add(BASIC.box, { x, y: CY - 0.05, z: 0, sx: 0.25, sy: 0.08, sz: D - 1, color: '#fff2c4', k: 2.4 });
+      add(hg.build(), new THREE.MeshBasicMaterial({ vertexColors: true }), g0);
+      const bl = new Bulbs();
+      for (let x = -W / 2 - 0.8; x <= W / 2 + 0.8; x += 0.8) bl.add(BASIC.box, { x, y: CY + 0.1, z: D / 2 + 1.05, sx: 0.24, sy: 0.24, sz: 0.24, color: BULBS[Math.round(x / 0.8 + 99) % BULBS.length], k: 3 }, x * 0.25);
+      for (let x = -W * 0.36; x <= W * 0.36; x += 0.75) bl.add(BASIC.box, { x, y: CY + 3.25, z: D / 2 + 1.05, sx: 0.22, sy: 0.22, sz: 0.22, color: '#fff4d6', k: 3 }, -x * 0.25);
+      add(bl.build(), chase, g0);
+      const sc = document.createElement('canvas');
+      sc.width = 1024;
+      sc.height = 160;
+      const sg = sc.getContext('2d');
+      sg.fillStyle = '#2a1a4a';
+      sg.fillRect(0, 0, 1024, 160);
+      sg.font = 'italic 900 112px system-ui, "Segoe UI", Arial, sans-serif';
+      sg.textAlign = 'center';
+      sg.textBaseline = 'middle';
+      sg.lineJoin = 'round';
+      sg.strokeStyle = '#ff4f9e';
+      sg.lineWidth = 16;
+      sg.strokeText('AUTOSCOOTER', 512, 84);
+      sg.fillStyle = '#ffe9a8';
+      sg.fillText('AUTOSCOOTER', 512, 84);
+      const stex = new THREE.CanvasTexture(sc);
+      stex.colorSpace = THREE.SRGBColorSpace;
+      stex.anisotropy = 8;
+      const sign = add(new THREE.PlaneGeometry(W * 0.62, W * 0.62 * (160 / 1024)), new THREE.MeshBasicMaterial({ map: stex, color: new THREE.Color(1.25, 1.25, 1.25) }), g0);
+      sign.position.set(0, CY + 1.9, D / 2 + 1.02);
+      // Wartende am Geländer (Welt-Koordinaten)
+      const cs = Math.cos(g0.rotation.y);
+      const sn = Math.sin(g0.rotation.y);
+      for (let i = 0; i < 9; i++) {
+        const lx = (i < 5 ? -1 : 1) * (3.2 + (i % 5) * 1.9 + rnd() * 0.6);
+        const lz = D / 2 + 1.5 + rnd() * 0.5;
+        if (rnd() < 0.8) waiting.push([p.x + lx * cs + lz * sn, p.z - lx * sn + lz * cs, 0.85 + rnd() * 0.3]);
+      }
+      // Wagen: gefärbter Teil (Wanne, Haube, Lehne, Fahrer-Shirt) + fester Teil (Gummiring, Stange, Kopf, Lenkrad)
+      const NC = n(9);
+      const tb = new GeoBuilder();
+      tb.add(BASIC.cyl24, { x: 0, y: 0.62, z: 0, sx: 0.8, sy: 0.46, sz: 1.02, color: '#ffffff', smooth: true });
+      tb.add(BASIC.sphere, { x: 0, y: 0.86, z: 0.48, sx: 0.68, sy: 0.3, sz: 0.52, color: '#ffffff', smooth: true });
+      tb.add(BASIC.box, { x: 0, y: 1.12, z: -0.66, sx: 1.05, sy: 0.75, sz: 0.22, color: '#d8d8d8' });
+      tb.add(BASIC.cyl12, { x: 0, y: 1.22, z: -0.28, sx: 0.27, sy: 0.55, sz: 0.27, color: '#8c8c8c', smooth: true });
+      const fb = new GeoBuilder();
+      fb.add(BASIC.cyl24, { x: 0, y: 0.36, z: 0, sx: 0.94, sy: 0.32, sz: 1.16, color: '#2a2633', smooth: true });
+      fb.add(BASIC.cyl8, { x: 0, y: (1.0 + CY - FY) / 2, z: -0.86, sx: 0.04, sy: CY - FY - 1.0, sz: 0.04, color: '#c8c8d4' });
+      fb.add(BASIC.box, { x: 0, y: CY - FY - 0.08, z: -0.86, sx: 0.35, sy: 0.1, sz: 0.12, color: '#c8c8d4' });
+      fb.add(BASIC.sphere, { x: 0, y: 1.74, z: -0.28, sx: 0.24, sy: 0.26, sz: 0.24, color: SKIN[1], smooth: true });
+      fb.add(BASIC.cyl12, { x: 0, y: 1.2, z: 0.18, rx: -0.9, sx: 0.22, sy: 0.04, sz: 0.22, color: '#2a2633', smooth: true });
+      fb.add(BASIC.sphere, { x: -0.38, y: 0.82, z: 0.98, sx: 0.12, sy: 0.12, sz: 0.06, color: '#fff4d6', k: 2 });
+      fb.add(BASIC.sphere, { x: 0.38, y: 0.82, z: 0.98, sx: 0.12, sy: 0.12, sz: 0.06, color: '#fff4d6', k: 2 });
+      const cars = new THREE.InstancedMesh(tb.build(), lambert(), NC);
+      const carsFix = new THREE.InstancedMesh(fb.build(), lambert(), NC);
+      const sparks = new THREE.InstancedMesh(new THREE.OctahedronGeometry(1, 0), new THREE.MeshBasicMaterial({ color: new THREE.Color('#bfe8ff').multiplyScalar(3) }), NC);
+      const CC = ['#ff3b5c', '#2ce7ff', '#ffd23d', '#7dff5a', '#ff7a1f', '#a585ff', '#ff5fd0', '#3d7bff', '#ffffff'];
+      for (const m of [cars, carsFix, sparks]) {
+        m.frustumCulled = false;
+        g0.add(m);
+      }
+      for (let i = 0; i < NC; i++) cars.setColorAt(i, new THREE.Color(CC[i % CC.length]));
+      // einfache Fahrphysik: jeder Wagen fährt vorwärts, lenkt auf ein Ziel (oft einen anderen Wagen) und prallt ab
+      let seed = Math.floor(rnd() * 1e9);
+      const rr = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+      const XM = W / 2 - 1.35;
+      const ZM = D / 2 - 1.35;
+      const C = [];
+      for (let i = 0; i < NC; i++) {
+        C.push({ x: -XM + ((i % 5) + 0.5) * ((2 * XM) / 5), z: i < 5 ? -ZM * 0.45 : ZM * 0.45, h: rr() * Math.PI * 2, v: 0, vx: 0, vz: 0, top: 2.6 + rr() * 1.4, tgt: -1, tT: rr() * 3, bump: 0, wob: 0 });
+      }
+      const angd = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+      const M = new THREE.Matrix4();
+      const P = new THREE.Vector3();
+      const Q = new THREE.Quaternion();
+      const E = new THREE.Euler(0, 0, 0, 'YXZ');
+      const S1 = new THREE.Vector3(1, 1, 1);
+      const SS = new THREE.Vector3();
+      let last = null;
+      updates.push((t) => {
+        const dt = last == null ? 0 : Math.min(0.05, Math.max(0, t - last));
+        last = t;
+        for (let i = 0; i < NC; i++) {
+          const c = C[i];
+          c.tT -= dt;
+          if (c.tT <= 0) {
+            c.tgt = rr() < 0.65 ? Math.floor(rr() * NC) : -1;
+            if (c.tgt === i) c.tgt = -1;
+            c.tT = 1.8 + rr() * 3.5;
+          }
+          let want;
+          if (c.tgt >= 0) want = Math.atan2(C[c.tgt].x - c.x, C[c.tgt].z - c.z);
+          else want = c.h + Math.sin(t * 0.8 + i * 2.1) * 0.9;
+          // Wand voraus: zur Mitte abdrehen
+          const ax = c.x + Math.sin(c.h) * 2.4;
+          const az = c.z + Math.cos(c.h) * 2.4;
+          if (Math.abs(ax) > XM || Math.abs(az) > ZM) want = Math.atan2(-c.x, -c.z);
+          c.h += Math.max(-1.7 * dt, Math.min(1.7 * dt, angd(want, c.h)));
+          c.v += Math.max(-3 * dt, Math.min(2.2 * dt, c.top - c.v));
+          c.x += (Math.sin(c.h) * c.v + c.vx) * dt;
+          c.z += (Math.cos(c.h) * c.v + c.vz) * dt;
+          const damp = Math.exp(-3 * dt);
+          c.vx *= damp;
+          c.vz *= damp;
+          c.bump = Math.max(0, c.bump - dt * 1.8);
+          c.wob += dt * 18;
+          // Bande: zurückprallen
+          if (Math.abs(c.x) > XM) {
+            c.x = Math.sign(c.x) * XM;
+            c.vx = -Math.sign(c.x) * Math.max(1.5, Math.abs(Math.sin(c.h) * c.v) * 0.8);
+            c.v *= 0.3;
+            c.bump = Math.max(c.bump, 0.7);
+          }
+          if (Math.abs(c.z) > ZM) {
+            c.z = Math.sign(c.z) * ZM;
+            c.vz = -Math.sign(c.z) * Math.max(1.5, Math.abs(Math.cos(c.h) * c.v) * 0.8);
+            c.v *= 0.3;
+            c.bump = Math.max(c.bump, 0.7);
+          }
+        }
+        // Zusammenstöße: auseinanderschieben und gegenseitig wegstoßen
+        for (let i = 0; i < NC; i++) {
+          for (let j = i + 1; j < NC; j++) {
+            const a = C[i];
+            const b = C[j];
+            const dx = b.x - a.x;
+            const dz = b.z - a.z;
+            const d = Math.hypot(dx, dz);
+            if (d >= 2.05 || d < 1e-4) continue;
+            const nx = dx / d;
+            const nz = dz / d;
+            const o = (2.05 - d) / 2;
+            a.x -= nx * o;
+            a.z -= nz * o;
+            b.x += nx * o;
+            b.z += nz * o;
+            const closing = (Math.sin(a.h) * a.v + a.vx - Math.sin(b.h) * b.v - b.vx) * nx + (Math.cos(a.h) * a.v + a.vz - Math.cos(b.h) * b.v - b.vz) * nz;
+            if (closing <= 0.2) continue;
+            const k = Math.min(4, 0.9 + closing * 0.75);
+            a.vx -= nx * k;
+            a.vz -= nz * k;
+            b.vx += nx * k;
+            b.vz += nz * k;
+            a.v *= 0.35;
+            b.v *= 0.35;
+            a.bump = b.bump = 1;
+            if (a.tgt === j) a.tgt = -1;
+            if (b.tgt === i) b.tgt = -1;
+          }
+        }
+        for (let i = 0; i < NC; i++) {
+          const c = C[i];
+          // nach einem Stoß kurz nachwippen
+          E.set(Math.sin(c.wob) * c.bump * 0.07, c.h, Math.cos(c.wob * 0.8) * c.bump * 0.05);
+          Q.setFromEuler(E);
+          P.set(c.x, FY, c.z);
+          M.compose(P, Q, S1);
+          cars.setMatrixAt(i, M);
+          carsFix.setMatrixAt(i, M);
+          // Funken am Stromabnehmer: flackern, nach Stößen heller
+          const on = rr() < 0.25 + c.bump * 0.6;
+          SS.setScalar(on ? 0.05 + rr() * 0.09 + c.bump * 0.1 : 0.0001);
+          P.set(c.x - Math.sin(c.h) * 0.86, CY - 0.08, c.z - Math.cos(c.h) * 0.86);
+          Q.setFromAxisAngle(_y, rr() * 6.3);
+          M.compose(P, Q, SS);
+          sparks.setMatrixAt(i, M);
+        }
+        cars.instanceMatrix.needsUpdate = true;
+        carsFix.instanceMatrix.needsUpdate = true;
+        sparks.instanceMatrix.needsUpdate = true;
+      });
+    }
   }
 
   // ---------- Zirkuszelt über der Gegengeraden: die Bahn fährt hindurch ----------

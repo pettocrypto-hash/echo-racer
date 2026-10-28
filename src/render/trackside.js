@@ -727,3 +727,162 @@ export function buildSpectators(track, skip, parts, { RH, RW }, { gy, det, rnd, 
     dispose: () => [bodyGeo, headGeo, flagGeo, mat, bodies, heads, flags].forEach((d) => d.dispose()),
   };
 }
+
+// Werbe-Luftschiff: zieht langsam große Kreise über der Strecke, Banderole „★ ECHO RACER ★“ auf beiden Seiten,
+// Propeller drehen sich, nachts blinken die Positionslichter
+function blimpTexture(accent) {
+  // Seitenverhältnis wie die Banderole auf der Hülle (≈ 17 m × 6,4 m), damit die Schrift nicht gestaucht wirkt
+  const W = 1536;
+  const H = 576;
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, W, H);
+  g.fillStyle = accent;
+  g.fillRect(0, 0, W, 62);
+  g.fillRect(0, H - 62, W, 62);
+  g.fillStyle = '#ffd23d';
+  g.fillRect(0, 62, W, 18);
+  g.fillRect(0, H - 80, W, 18);
+  const text = '★ ECHO RACER ★';
+  let size = 230;
+  g.font = `italic 900 ${size}px system-ui, "Segoe UI", Arial, sans-serif`;
+  size = Math.floor(size * Math.min(1, (W - 150) / g.measureText(text).width));
+  g.font = `italic 900 ${size}px system-ui, "Segoe UI", Arial, sans-serif`;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.lineJoin = 'round';
+  g.strokeStyle = '#2a2633';
+  g.lineWidth = size * 0.11;
+  g.strokeText(text, W / 2, H / 2 + size * 0.04);
+  g.fillStyle = accent;
+  g.fillText(text, W / 2, H / 2 + size * 0.04);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return t;
+}
+
+export function buildBlimp(track, { accent = '#8a52ff', night = false } = {}) {
+  const group = new THREE.Group();
+  const disposables = [];
+  const RX = 18;
+  const RR = 5.2;
+  // Hülle
+  const hullGeo = new THREE.SphereGeometry(1, 40, 20).scale(RX, RR, RR);
+  const hullMat = new THREE.MeshStandardMaterial({ color: '#f2f0f8', roughness: 0.45, metalness: 0.05 });
+  group.add(new THREE.Mesh(hullGeo, hullMat));
+  disposables.push(hullGeo, hullMat);
+  // Banderole auf beiden Seiten: Fläche, die der Hülle folgt (Schrift von außen lesbar)
+  const tex = blimpTexture(accent);
+  const pos = [];
+  const uv = [];
+  const idx = [];
+  const NX = 24;
+  const NT = 8;
+  const X0 = -8.5;
+  const X1 = 8.5;
+  const T0 = -0.62;
+  const T1 = 0.62;
+  for (const s of [1, -1]) {
+    const base = pos.length / 3;
+    for (let i = 0; i <= NX; i++) {
+      const x = X0 + ((X1 - X0) * i) / NX;
+      const r = RR * Math.sqrt(1 - (x / RX) ** 2) * 1.012;
+      for (let j = 0; j <= NT; j++) {
+        const th = T0 + ((T1 - T0) * j) / NT;
+        pos.push(x, r * Math.sin(th), s * r * Math.cos(th));
+        const u = (x - X0) / (X1 - X0);
+        uv.push(s > 0 ? u : 1 - u, j / NT);
+      }
+    }
+    for (let i = 0; i < NX; i++) {
+      for (let j = 0; j < NT; j++) {
+        const a = base + i * (NT + 1) + j;
+        const b = a + NT + 1;
+        if (s > 0) idx.push(a, b, b + 1, a, b + 1, a + 1);
+        else idx.push(a, b + 1, b, a, a + 1, b + 1);
+      }
+    }
+  }
+  const bandGeo = new THREE.BufferGeometry();
+  bandGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  bandGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  bandGeo.setIndex(idx);
+  bandGeo.computeVertexNormals();
+  const bandMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.5, polygonOffset: true, polygonOffsetFactor: -2 });
+  if (night) {
+    bandMat.emissive = new THREE.Color(0xffffff);
+    bandMat.emissiveMap = tex;
+    bandMat.emissiveIntensity = 0.35;
+  }
+  group.add(new THREE.Mesh(bandGeo, bandMat));
+  disposables.push(bandGeo, bandMat, tex);
+  // Leitwerk, Gondel, Motoren
+  const b = new GeoBuilder();
+  for (const rx of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+    b.add(BASIC.box, { x: -15.2, y: Math.cos(rx) * 4.2, z: Math.sin(rx) * 4.2, rx, sx: 5.2, sy: 3.6, sz: 0.28, color: accent });
+    b.add(BASIC.box, { x: -16.9, y: Math.cos(rx) * 5.6, z: Math.sin(rx) * 5.6, rx, sx: 1.6, sy: 0.9, sz: 0.3, color: '#ffd23d' });
+  }
+  b.add(BASIC.box, { x: 0.5, y: -5.7, z: 0, sx: 6, sy: 1.6, sz: 2.4, color: '#2a2633' });
+  b.add(BASIC.box, { x: 0.5, y: -4.95, z: 0, sx: 3, sy: 0.4, sz: 1.2, color: '#d8d4e4' });
+  for (const z of [-4.4, 4.4]) {
+    b.add(BASIC.cyl12, { x: -3, y: -4.2, z, rz: Math.PI / 2, sx: 0.5, sy: 2.4, sz: 0.5, color: '#d8d4e4', smooth: true });
+    b.add(BASIC.sphere, { x: -1.8, y: -4.2, z, sx: 0.5, sy: 0.5, sz: 0.5, color: accent });
+    b.add(BASIC.box, { x: -3, y: -4.2, z: Math.sign(z) * 3.65, sx: 0.5, sy: 0.25, sz: 1.5, color: '#d8d4e4' });
+  }
+  // Positionslichter an der Gondel: rot backbord (−z), grün steuerbord (+z); weiß am Heck, rot oben – blinken nachts
+  const lb = new GeoBuilder();
+  for (const [x, y, z, col] of [[3.5, -5.7, -1.25, '#ff2a3a'], [3.5, -5.7, 1.25, '#2aff6a'], [-17.6, 0, 0, '#ffffff'], [0, RR + 0.1, 0, '#ff2a3a']]) {
+    lb.add(BASIC.sphere, { x, y, z, sx: 0.3, sy: 0.3, sz: 0.3, color: col, k: night ? 3 : 1.3 });
+  }
+  const lightGeo = lb.build();
+  const lightMat = new THREE.MeshBasicMaterial({ vertexColors: true });
+  const lights = new THREE.Mesh(lightGeo, lightMat);
+  group.add(lights);
+  disposables.push(lightGeo, lightMat);
+  const partsGeo = b.build();
+  const partsMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  group.add(new THREE.Mesh(partsGeo, partsMat));
+  disposables.push(partsGeo, partsMat);
+  // Fensterband der Gondel (leuchtet)
+  const winGeo = new THREE.BoxGeometry(4.6, 0.5, 2.46);
+  const winMat = new THREE.MeshBasicMaterial({ color: new THREE.Color('#fff2c4').multiplyScalar(night ? 2.2 : 1.0) });
+  const win = new THREE.Mesh(winGeo, winMat);
+  win.position.set(0.5, -5.6, 0);
+  group.add(win);
+  disposables.push(winGeo, winMat);
+  // Propeller
+  const propGeo = new THREE.BoxGeometry(0.12, 1.8, 0.26);
+  const propMat = new THREE.MeshLambertMaterial({ color: '#2a2633' });
+  const props = [];
+  for (const z of [-4.4, 4.4]) {
+    const p = new THREE.Mesh(propGeo, propMat);
+    p.position.set(-4.3, -4.2, z);
+    group.add(p);
+    props.push(p);
+  }
+  disposables.push(propGeo, propMat);
+  // Flugbahn: großer Kreis über der Strecke, etwas über den höchsten Stellen
+  const bb = track.bounds;
+  const cx = (bb.minX + bb.maxX) / 2;
+  const cz = (bb.minZ + bb.maxZ) / 2;
+  const R = Math.max(bb.maxX - bb.minX, bb.maxZ - bb.minZ) * 0.42 + 40;
+  let top = 0;
+  for (let k = 0; k < track.n; k++) top = Math.max(top, track.hy[k]);
+  const alt = top + 58;
+  const a0 = (track.id.length * 1.7) % (Math.PI * 2);
+  return {
+    group,
+    update(t) {
+      const a = a0 + (t * Math.PI * 2) / 210;
+      group.position.set(cx + Math.cos(a) * R, alt + Math.sin(t * 0.31) * 1.5, cz + Math.sin(a) * R);
+      group.rotation.set(Math.sin(t * 0.23) * 0.02, -a - Math.PI / 2, 0);
+      for (const p of props) p.rotation.x = t * 22;
+      lights.visible = !night || Math.sin(t * 4) > 0.6;
+    },
+    dispose: () => disposables.forEach((d) => d.dispose()),
+  };
+}

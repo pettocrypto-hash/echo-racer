@@ -1612,6 +1612,11 @@ input {
   .set.wide {
     grid-column: span 1;
   }
+  /* Streckenkarten untereinander statt zu zweit (sonst stehen sie seitlich über) */
+  .tracks,
+  .gp-tracks {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* ---------- Grand Prix, Erfolge, Lacke ---------- */
@@ -2155,6 +2160,25 @@ input {
   top: 5px;
   right: 8px;
   font-size: 15px;
+}
+
+/* Siege je Strecke (Solo-Auswahl) */
+.twins {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  padding: 1px 7px;
+  border-radius: 9px;
+  background: rgba(255, 210, 61, 0.16);
+  color: #ffd23d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.twins.none {
+  background: none;
+  opacity: 0.32;
+  filter: grayscale(1);
 }
 
 /* Ergebnis */

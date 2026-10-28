@@ -14,7 +14,7 @@ import { CARS, HACKS, PLAYER_COLORS, MAX_CARS, PROTOCOL, COUNTDOWN, CHARACTERS, 
 import { settings, saveSettings, enterFullscreen, wakeLock, isTouch, shareLink } from './platform.js';
 import { clamp } from './util.js';
 import { driverPortraits } from './render/portraits.js';
-import { PAINTS, recordRace, recordGP, paintUnlocked, raceXP, addXP, checkDaily, dailyChallenge, checkAchievements, recordStyle, medalAwarded, awardMedal, flameUnlocked, updateMissions, classUnlocked, gpStars } from './progress.js';
+import { PAINTS, progress, recordRace, recordGP, paintUnlocked, raceXP, addXP, checkDaily, dailyChallenge, checkAchievements, recordStyle, medalAwarded, awardMedal, flameUnlocked, updateMissions, classUnlocked, gpStars } from './progress.js';
 
 function fatal(msg) {
   const d = document.createElement('div');
@@ -400,6 +400,8 @@ class App {
     let medal = null;
     let daily = null;
     const row = res.find((r) => r.id === session.localId);
+    const baseId = session.trackId.replace(/~m$/, '');
+    const winsBefore = (progress.trackWins || {})[baseId] || 0;
     fresh = recordRace({ row, trackId: session.trackId, trackLength: session.track.length, mode: session.mode, total: res.length, photoWin: !!session.photoWin });
     // Zeitfahren: Medaille der Strecken-Bestzeit gegen die schon belohnte Medaille, dazu die Medaille dieser Fahrt
     if (session.mode === 'timetrial') {
@@ -414,6 +416,8 @@ class App {
     const rival = res.find((r) => session.sim.byId.get(r.id)?.rival);
     const rivalBeaten = rival && row && row.finished && session.mode === 'race' && (!rival.finished || row.rank < rival.rank);
     if (rivalBeaten) items.push([`Rivale ${rival.name} geschlagen`, 50]);
+    // erster Sieg auf einer Strecke: einmaliger Bonus (lockt auf alle Strecken – „Weltmeister“)
+    if (!winsBefore && (progress.trackWins || {})[baseId] === 1) items.push([`Erster Sieg: ${trackDefById(baseId).name}`, 40]);
     if (session.daily) {
       daily = { ch: session.daily, done: checkDaily(session.daily, { row, lapBest: row?.best }) };
       if (daily.done) items.push([`Tages-Challenge · Serie ${daily.done.streak}`, daily.done.xp]);

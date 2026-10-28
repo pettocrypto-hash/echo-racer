@@ -963,6 +963,21 @@ export class RaceView {
           this.smoke.emit(bx, gyC + 0.3, bz, -fx * 2 + (Math.random() - 0.5) * 1.5, 0.6 + Math.random() * 0.8, -fz * 2 + (Math.random() - 0.5) * 1.5, 0.45 + Math.random() * 0.3, 0.55, this.smokeCol, 1, -0.8, 2.2);
         }
       }
+      // Regen: Gischt hinter den Hinterrädern – Sprühnebel + feine Tropfen, mit dem Tempo stärker (nur in Kameranähe)
+      if (this.rainK && !c.ghost && !st.air && st.spd > 12 && Math.random() < Math.min(1, (st.spd - 12) / 16) * this.rainK) {
+        const cam = this.camera.position;
+        if (Math.abs(cam.x - x) + Math.abs(cam.z - z) < 70) {
+          // die Gischt wird vom Fahrtwind mitgezogen: ~¾ des Kart-Tempos, bleibt so als kurze Fahne hinter den Rädern
+          const vxC = st.vx * 0.8;
+          const vzC = st.vz * 0.8;
+          for (const side of SIDES) {
+            const bx = x - fx * 1.3 + rx * side * 0.92;
+            const bz = z - fz * 1.3 + rz * side * 0.92;
+            this.smoke.emit(bx, gyC + 0.3, bz, vxC + rx * side * 1.3 + (Math.random() - 0.5) * 1.4, 0.8 + Math.random() * 1.2, vzC + rz * side * 1.3 + (Math.random() - 0.5) * 1.4, 0.14 + Math.random() * 0.1, 0.3, '#9fb3d6', 0.8, -0.3, 1.5);
+            if (Math.random() < 0.8) P.emit(bx, gyC + 0.2, bz, vxC + rx * side * 2.2 + (Math.random() - 0.5) * 2, 2 + Math.random() * 2.2, vzC + rz * side * 2.2 + (Math.random() - 0.5) * 2, 0.22 + Math.random() * 0.12, 0.12, '#d8ecff', 1.1, 14, 1);
+          }
+        }
+      }
       if (st.drift && !st.air && st.spd > 8) {
         const lvl = st.driftLvl;
         const colr = this.driftCols[lvl];

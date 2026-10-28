@@ -36,6 +36,18 @@ const LINES = {
   sad: [[3, 0.2], [0, 0.18], [-5, 0.42]],
 };
 
+// Motor-Charakter je Kart: Wellenformen (Grundton, Unterton, Zweitton), Verstimmung des Zweittons in Cent,
+// Grundfrequenz + Drehzahlspanne (Hz), Tiefpass (Basis + Spanne, Güte), Lautstärke, Gänge; Extras: lope (Blubbern),
+// warble (Flattern in Cent), vib (Vibrato-Rate)
+const ENGINES = {
+  komet: { w: ['sawtooth', 'square', 'sawtooth'], det: 9, sub: 0.5, base: 38, range: 120, f0: 260, f1: 1500, q: 2.5, vol: 1, gears: 5 },
+  viper: { w: ['sawtooth', 'sawtooth', 'sawtooth'], det: 14, sub: 0.3, base: 50, range: 178, f0: 420, f1: 2300, q: 3.6, vol: 0.95, gears: 6 },
+  glitch: { w: ['square', 'square', 'square'], det: 702, sub: 0.35, g3: 0.55, base: 44, range: 128, f0: 480, f1: 1600, q: 6.5, vol: 0.62, gears: 5, warble: 38 },
+  nova: { w: ['triangle', 'sine', 'sawtooth'], det: 1200, sub: 0.3, g3: 0.3, base: 58, range: 210, f0: 620, f1: 2600, q: 1.6, vol: 1.1, gears: 5 },
+  titan: { w: ['square', 'sawtooth', 'sawtooth'], det: 6, sub: 0.9, base: 27, range: 82, f0: 170, f1: 950, q: 1.8, vol: 1.35, gears: 4, lope: 0.42 },
+  pixel: { w: ['square', 'triangle', 'square'], det: 18, sub: 0.25, base: 72, range: 200, f0: 700, f1: 2400, q: 4, vol: 0.55, gears: 1, vib: 13 },
+};
+
 export class AudioEngine {
   constructor() {
     this.ctx = null;
@@ -273,29 +285,60 @@ export class AudioEngine {
   }
 
   // --- Motor ---
-  startEngine() {
-    if (!this.ctx || this.engine) return;
+  // type = Kart-Id (Klangcharakter aus ENGINES); ein anderes Kart ersetzt den laufenden Motor
+  startEngine(type = 'komet') {
+    if (!this.ctx) return;
+    if (this.engine) {
+      if (this.engine.type === type && !this.engine.rev) return;
+      clearTimeout(this.revT);
+      this.stopEngine();
+    }
     const ctx = this.ctx;
+    const pr = ENGINES[type] || ENGINES.komet;
     const o1 = ctx.createOscillator();
     const o2 = ctx.createOscillator();
     const o3 = ctx.createOscillator();
-    o1.type = 'sawtooth';
-    o2.type = 'square';
-    o3.type = 'sawtooth';
-    o3.detune.value = 9;
+    o1.type = pr.w[0];
+    o2.type = pr.w[1];
+    o3.type = pr.w[2];
+    o3.detune.value = pr.det;
     const f = ctx.createBiquadFilter();
     f.type = 'lowpass';
-    f.Q.value = 2.5;
+    f.Q.value = pr.q;
     const g = ctx.createGain();
     g.gain.value = 0;
     const g2 = ctx.createGain();
-    g2.gain.value = 0.5;
+    g2.gain.value = pr.sub;
+    const g3 = ctx.createGain();
+    g3.gain.value = pr.g3 ?? 1;
+    // Lastwechsel-Blubbern (Titan): Lautstärke schwankt im Takt einer langsamen Welle
+    const am = ctx.createGain();
+    am.gain.value = 1;
     o1.connect(f);
-    o3.connect(f);
+    o3.connect(g3);
+    g3.connect(f);
     o2.connect(g2);
     g2.connect(f);
-    f.connect(g);
+    f.connect(am);
+    am.connect(g);
     g.connect(this.sfxGain);
+    const lfos = [];
+    const mod = (wave, rate, depth, ...targets) => {
+      const l = ctx.createOscillator();
+      l.type = wave;
+      l.frequency.value = rate;
+      const lg = ctx.createGain();
+      lg.gain.value = depth;
+      l.connect(lg);
+      for (const tg of targets) lg.connect(tg);
+      l.start();
+      lfos.push(l);
+      return { l, lg };
+    };
+    const lope = pr.lope ? mod('sine', 5, pr.lope, am.gain) : null;
+    if (lope) am.gain.value = 1 - pr.lope;
+    if (pr.warble) mod('square', 7.5, pr.warble, o1.detune); // Glitch: digitales Flattern
+    if (pr.vib) mod('sine', pr.vib, 22, o1.detune, o3.detune); // Pixel: knatterndes Vibrato
     o1.start();
     o2.start();
     o3.start();
@@ -311,7 +354,7 @@ export class AudioEngine {
     bp.connect(dg);
     dg.connect(this.sfxGain);
     n.start();
-    this.engine = { o1, o2, o3, f, g, n, bp, dg };
+    this.engine = { type, pr, o1, o2, o3, f, g, n, bp, dg, lope, lfos };
   }
 
   stopEngine() {
@@ -326,6 +369,7 @@ export class AudioEngine {
         e.o2.stop();
         e.o3.stop();
         e.n.stop();
+        for (const l of e.lfos) l.stop();
       } catch {
         /* schon gestoppt */
       }
@@ -333,19 +377,52 @@ export class AudioEngine {
     this.engine = null;
   }
 
+  // Garage: Motor kurz aufheulen lassen (Gas geben, hochdrehen, ausrollen) – nur, wenn kein Rennen läuft
+  rev(type) {
+    if (!this.ready || (this.engine && !this.engine.rev)) return;
+    clearTimeout(this.revT);
+    this.stopEngine();
+    this.startEngine(type);
+    const e = this.engine;
+    if (!e) return;
+    e.rev = true;
+    const steps = [[0, 0.05, 0.6], [120, 0.35, 1], [330, 0.62, 1], [560, 0.82, 1], [820, 0.3, 0], [1150, 0.08, 0]];
+    for (const [ms, sp, th] of steps) {
+      setTimeout(() => {
+        if (this.engine === e) this.setEngine(sp, th, false, false, 0, false);
+      }, ms);
+    }
+    this.revT = setTimeout(() => {
+      if (this.engine === e) this.stopEngine();
+    }, 1500);
+  }
+
   setEngine(speedRatio, throttle, boost, drifting, driftLvl, air) {
     const e = this.engine;
     if (!e) return;
     const t = this.ctx.currentTime;
-    const r = Math.max(0, speedRatio) * 5;
-    const gear = Math.min(4, Math.floor(r));
-    const rpm = Math.min(1.25, 0.32 + (r - gear) * 0.7 + gear * 0.03) + (air ? 0.2 : 0);
-    const freq = 38 + rpm * 120 + (boost ? 18 : 0);
+    const pr = e.pr;
+    // Gänge: Drehzahl steigt je Gang und fällt beim Schalten; ohne Gänge (Pixel) stufenlos
+    const G = pr.gears;
+    const sr = Math.max(0, speedRatio);
+    let rpm;
+    if (G > 1) {
+      const r = sr * G;
+      const gear = Math.min(G - 1, Math.floor(r));
+      rpm = Math.min(1.25, 0.32 + (r - gear) * 0.7 + gear * 0.03);
+    } else rpm = Math.min(1.25, 0.3 + sr * 0.85);
+    rpm += air ? 0.2 : 0;
+    const freq = pr.base + rpm * pr.range + (boost ? pr.range * 0.15 : 0);
     e.o1.frequency.setTargetAtTime(freq, t, 0.04);
     e.o3.frequency.setTargetAtTime(freq * 1.005, t, 0.04);
     e.o2.frequency.setTargetAtTime(freq * 0.5, t, 0.04);
-    e.f.frequency.setTargetAtTime(260 + rpm * 1500 + throttle * 500 + (boost ? 900 : 0), t, 0.05);
-    e.g.gain.setTargetAtTime(0.045 + throttle * 0.05 + (boost ? 0.03 : 0), t, 0.08);
+    e.f.frequency.setTargetAtTime(pr.f0 + rpm * pr.f1 + throttle * 500 + (boost ? 900 : 0), t, 0.05);
+    e.g.gain.setTargetAtTime((0.045 + throttle * 0.05 + (boost ? 0.03 : 0)) * pr.vol, t, 0.08);
+    if (e.lope) {
+      // im Leerlauf kräftiges Blubbern, bei hoher Drehzahl fast glatt
+      e.lope.l.frequency.setTargetAtTime(3.5 + rpm * 9, t, 0.1);
+      e.lope.lg.gain.setTargetAtTime(pr.lope * Math.max(0.15, 1 - rpm * 0.75), t, 0.1);
+    }
     e.dg.gain.setTargetAtTime(drifting ? 0.05 + driftLvl * 0.018 : 0, t, 0.05);
     e.bp.frequency.setTargetAtTime(1800 + driftLvl * 500, t, 0.1);
   }

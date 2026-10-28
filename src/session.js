@@ -1073,7 +1073,7 @@ export class RaceSession {
     const au = this.app.audio;
     if (this.ended) au.stopEngine();
     else if (t > -COUNTDOWN) {
-      au.startEngine();
+      au.startEngine(c.stats.id);
       au.setEngine(st.spd / c.stats.top, c.input.throttle || 0, st.boostT > 0, !!st.drift, st.driftLvl, !!st.air);
     }
   }

@@ -10,7 +10,7 @@ import {
   lavaTextures, sandTexture, textTexture, billboardAtlas, setAnisotropy, grassTexture, roadArrowTexture, pavingTexture,
 } from './textures.js';
 import { mulberry32 } from '../util.js';
-import { buildChevrons, buildGrandstand, buildBannerPoles, buildBalloons, buildSponsorBoards, buildSpectators } from './trackside.js';
+import { buildChevrons, buildGrandstand, buildBannerPoles, buildBalloons, buildSponsorBoards, buildSpectators, buildBlimp } from './trackside.js';
 import { JUMP_LEN } from '../config.js';
 import { addDetail } from './detail.js';
 import { buildPark } from './park.js';
@@ -628,6 +628,12 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
     root.add(...balloons.objects);
     keep(balloons);
     updaters.push(balloons.update);
+    // Werbe-Luftschiff zieht hoch über der Strecke seine Kreise
+    const BLIMP = { neon: '#6a2ae0', canyon: '#e8582a', sky: '#ff4fa3', lava: '#e8401a', garden: '#2f8f3a', park: '#8a52ff' };
+    const blimp = buildBlimp(track, { accent: BLIMP[themeId] || BLIMP.neon, night: !!th.beams });
+    root.add(blimp.group);
+    keep(blimp);
+    updaters.push(blimp.update);
   }
 
   // --- Riesen-Loopings als Kulisse ---

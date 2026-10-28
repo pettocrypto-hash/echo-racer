@@ -387,6 +387,8 @@ export class UI {
       b.addEventListener('click', () => {
         this.click();
         this._garageSelect(+b.dataset.i);
+        this.app.audio.rev(CARS[+b.dataset.i].id);
+        if (this.app.showroom) this.app.showroom.rev();
       })
     );
     gr.querySelectorAll('.drv-row button').forEach((b) =>
@@ -682,6 +684,16 @@ export class UI {
     this._syncSegs(s);
     this._trackCards(s.querySelector('.tracks'));
     s.querySelector('.carname').innerHTML = this._carName();
+    // Siege je Strecke als Pokal-Plakette; Strecken ohne Sieg blass (Ziel für „Weltmeister“)
+    const wins = progress.trackWins || {};
+    s.querySelectorAll('.tcard').forEach((b) => {
+      const w = wins[b.dataset.id] || 0;
+      const tag = document.createElement('span');
+      tag.className = 'twins' + (w ? '' : ' none');
+      tag.title = w ? `${w} ${w === 1 ? 'Sieg' : 'Siege'} auf dieser Strecke` : 'Noch kein Sieg auf dieser Strecke';
+      tag.textContent = w ? `🏆 ${w}` : '🏆';
+      b.appendChild(tag);
+    });
   }
 
   _show_tt(s) {

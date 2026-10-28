@@ -89,11 +89,32 @@ export class Showroom {
     this.glow.material.color.set(color).multiplyScalar(0.6);
   }
 
+  // Motor heult auf (Garage): Heck geht in die Knie, Karosserie vibriert, Räder drehen kurz durch
+  rev() {
+    this.revT = 0;
+  }
+
   frame(dt) {
     this.t += dt;
     this.turn.rotation.y = this.t * 0.45;
     if (this.car) {
-      for (const w of this.car.wheels) w.mesh.rotation.x += dt * 1.5;
+      let spin = 1.5;
+      const tl = this.car.tilt;
+      if (this.revT != null) {
+        this.revT += dt;
+        const r = this.revT;
+        const env = r < 0.85 ? Math.min(1, r / 0.25) : Math.max(0, 1 - (r - 0.85) / 0.5);
+        tl.rotation.x = -0.045 * env + Math.sin(r * 61) * 0.006 * env;
+        tl.rotation.z = Math.sin(r * 47) * 0.007 * env;
+        tl.position.y = Math.abs(Math.sin(r * 38)) * 0.012 * env;
+        spin += env * 14;
+        if (r > 1.4) {
+          this.revT = null;
+          tl.rotation.set(0, 0, 0);
+          tl.position.y = 0;
+        }
+      }
+      for (const w of this.car.wheels) w.mesh.rotation.x += dt * spin;
       // Figur schaut sich um und winkt ab und zu
       const d = this.car.driver;
       d.head.rotation.y = Math.sin(this.t * 0.7) * 0.45;
