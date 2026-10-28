@@ -1840,6 +1840,57 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
       balloons.instanceMatrix.needsUpdate = true;
     });
     meshes.push(balloons);
+    // Regenbogen gegenüber der Sonne: steigt weit hinter der Bahn aus dem Wolkenmeer auf (klare Farbbänder, durchscheinend)
+    {
+      const sun = th.sky.sun;
+      const hl = Math.hypot(sun[0], sun[2]) || 1;
+      const dx = -sun[0] / hl;
+      const dz = -sun[2] / hl;
+      const R = radius + 520;
+      const RO = 300;
+      const RI = RO * 0.86;
+      const geo = new THREE.RingGeometry(RI, RO, 128, 1, 0, Math.PI);
+      const mat = new THREE.ShaderMaterial({
+        uniforms: { uRI: { value: RI }, uRO: { value: RO } },
+        vertexShader: /* glsl */ `
+          varying vec2 vP;
+          void main() {
+            vP = position.xy;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }`,
+        fragmentShader: /* glsl */ `
+          uniform float uRI;
+          uniform float uRO;
+          varying vec2 vP;
+          vec3 band(float t) {
+            // außen Rot … innen Violett
+            vec3 c = mix(vec3(0.55, 0.35, 0.95), vec3(0.25, 0.45, 1.0), smoothstep(0.0, 0.2, t));
+            c = mix(c, vec3(0.25, 0.85, 0.45), smoothstep(0.2, 0.4, t));
+            c = mix(c, vec3(1.0, 0.92, 0.3), smoothstep(0.4, 0.58, t));
+            c = mix(c, vec3(1.0, 0.6, 0.2), smoothstep(0.58, 0.76, t));
+            c = mix(c, vec3(1.0, 0.3, 0.3), smoothstep(0.76, 0.92, t));
+            return c;
+          }
+          void main() {
+            float r = length(vP);
+            float t = clamp((r - uRI) / (uRO - uRI), 0.0, 1.0);
+            // Ränder weich auslaufen lassen, unten im Wolkenmeer ausblenden
+            float edge = smoothstep(0.0, 0.12, t) * (1.0 - smoothstep(0.88, 1.0, t));
+            float foot = smoothstep(0.0, 0.32, vP.y / uRO);
+            gl_FragColor = vec4(band(t), 0.42 * edge * foot);
+          }`,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+      const bow = new THREE.Mesh(geo, mat);
+      bow.position.set(cx + dx * R, -55, cz + dz * R);
+      // Bogenfläche zur Bahnmitte drehen
+      bow.rotation.y = Math.atan2(-dx, -dz);
+      bow.renderOrder = -5;
+      bow.frustumCulled = false;
+      meshes.push(bow);
+    }
   } else if (themeId === 'park') {
     buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, updates, blocked, blink: blinkLight, n, landmarks, sfx });
   } else if (themeId === 'garden') {
