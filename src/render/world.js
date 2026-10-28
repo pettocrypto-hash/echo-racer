@@ -159,6 +159,9 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
     dirVec.normalize();
   }
   dir.position.copy(dirVec).multiplyScalar(100);
+  // Achsen der Schattenkamera (wie lookAt mit up = +y): zum Einrasten des Ausschnitts im Lichtraum
+  const LX = new THREE.Vector3(0, 1, 0).cross(dirVec).normalize();
+  const LY = dirVec.clone().cross(LX).normalize();
   const sc = dir.shadow.camera;
   sc.left = -34;
   sc.right = 34;
@@ -704,13 +707,18 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
       sky.material.uniforms.uTime.value = t;
       padTex.offset.y = -t * 1.6;
       if (focus) {
-        // Schattenausschnitt folgt dem Auto, auf Texel-Raster eingerastet (kein Flimmern)
+        // Schattenausschnitt folgt dem Auto und rastet im Raster der Schattenkamera ein (Lichtraum statt Welt-x/z):
+        // so wandern Schattenkanten beim Fahren nicht über die Texel – kein Flimmern, auch mit kleiner Schattenkarte
         const step = 68 / Math.max(512, dir.shadow.mapSize.x);
-        const fx = Math.round(focus.x / step) * step;
-        const fz = Math.round(focus.z / step) * step;
         const fy = focus.y || 0;
-        dir.target.position.set(fx, fy, fz);
-        dir.position.set(fx + dirVec.x * 110, fy + dirVec.y * 110, fz + dirVec.z * 110);
+        const px = Math.round((focus.x * LX.x + fy * LX.y + focus.z * LX.z) / step) * step;
+        const py = Math.round((focus.x * LY.x + fy * LY.y + focus.z * LY.z) / step) * step;
+        const pz = focus.x * dirVec.x + fy * dirVec.y + focus.z * dirVec.z;
+        const sx = LX.x * px + LY.x * py + dirVec.x * pz;
+        const sy = LX.y * px + LY.y * py + dirVec.y * pz;
+        const sz = LX.z * px + LY.z * py + dirVec.z * pz;
+        dir.target.position.set(sx, sy, sz);
+        dir.position.set(sx + dirVec.x * 110, sy + dirVec.y * 110, sz + dirVec.z * 110);
       }
       for (const u of updaters) u(t, camera, focus, particles);
     },

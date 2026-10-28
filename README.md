@@ -121,6 +121,8 @@ Auf jeder Strecke: Tribüne mit Zuschauern, Spruchband und Flutlicht an der Star
 
 **Spiegelmodus:** Jede Strecke lässt sich seitenverkehrt fahren (Solo, Zeitfahren, Online). Alle Kurven drehen in die andere Richtung, Höhenprofil und Schanzen bleiben an ihrem Platz.
 
+**Streckenbreite:** Alle Strecken sind gegenüber den Bauplänen um 2,2–3,5 m verbreitert (+25 % der Breite, schmale Abschnitte gewinnen relativ am meisten) – mehr Platz zum Überholen und Driften. Die Medaillenzeiten sind darauf neu abgestimmt.
+
 Sechs Spielzeug-Karts mit offenem Cockpit, eigener Silhouette und klar unterschiedlichen Werten (Tempo, Beschleunigung, Handling, Drift, Hack-Ladetempo, Gewicht):
 
 | Kart | Stil | Rolle |
@@ -176,7 +178,7 @@ Der Build nutzt relative Pfade (`base: './'`), funktioniert also in jedem Untero
 
 ## Technik
 
-- **Three.js (WebGL2)** + Vanilla JS, gebaut mit **Vite**. Keine Bild-, Modell- oder Audiodateien: Strecken, Autos, Texturen, Icons und Musik werden prozedural erzeugt.
+- **Three.js (WebGL2)** + Vanilla JS, gebaut mit **Vite**. Keine Bild-, Modell- oder Audiodateien: Strecken, Autos, Texturen und Musik werden prozedural erzeugt. Die App-Icons sind aus den echten 3D-Modellen gerendert (Kart „Komet“ mit Volt, Echo-Geist, Spielzeugbahn vor Abendhimmel).
 - **Eigene Arcade-Physik** mit festem 60-Hz-Takt (Drift mit Funken-Stufen, Mini-Boosts, Windschatten, Rampen, Kollisionen über zwei Kreise pro Auto).
 - **Materialien und Licht:** PBR-Lack mit Rauheit/Metall pro Bauteil (Lack, Chrom, Glas, Gummi in einem Draw-Call), Spiegelungen über eine pro Welt erzeugte Umgebungs-Map (PMREM aus Himmel + Leuchtflächen), echte Schatten der Autos (Schatten-Kamera folgt dem Spieler), Scheinwerfer-Lichtkegel in dunklen Welten, GPU-animierte Umgebungspartikel (Regen, Staub, Glitzer, Glut).
 - **Rendering:** MSAA-Szene → Bloom (Dual-Filter, Schwelle pro Welt) → Kompositpass mit Schärfefilter (ohne Halos an Leuchtkanten), Geschwindigkeits-Unschärfe nur am Rand, Glitch-Effekt, ACES-Tonemapping und Color Grading pro Welt (Schatten-/Lichter-Tönung, Sättigung, Kontrast). Auflösung = `devicePixelRatio` (max. 2,5×) × **adaptiver Regler**: sinkt die Bildrate unter ~54 FPS, wird die Renderskalierung in Stufen gesenkt (bis 60 %, dann stärker nachgeschärft), bei Reserven wieder angehoben; bleibt es zu langsam, fällt die Grafikstufe automatisch (Hoch → Mittel → Niedrig) und steigt bei dauerhaften Reserven wieder. Auf 120-Hz-Displays wird auf 60 FPS begrenzt.
@@ -200,7 +202,7 @@ index.html                 Einstieg
 vite.config.js             Build-Konfiguration + Service-Worker-Generator
 sw-template.js             Vorlage des Service Workers
 public/                    Manifest und App-Icons
-scripts/                   Entwickler-Werkzeuge (Icons, Streckenvorschau, Simulations- und Angriffstest)
+scripts/                   Entwickler-Werkzeuge (Streckenvorschau, Medaillenzeiten, Simulations- und Angriffstest)
 src/
   main.js                  App: Menüfluss, Online-Lobby, Hauptschleife
   session.js               Rennsitzung (Solo / Host / Client / Menü-Demo)
@@ -232,7 +234,7 @@ src/
 - **Hacks als Funktion der Zeit:** Die Bahn des Echo-Klons und das mitwandernde Zentrum der Schockwelle werden aus wenigen Startwerten berechnet – Host und Clients kommen zum gleichen Zeitpunkt auf exakt dieselbe Position. Die Schockwelle trifft jedes Auto in genau dem Takt, in dem der Ring es überstreicht (zustandslos, daher auch beim Neu-Simulieren der Client-Vorhersage korrekt). Der Rammstoß-Schild steckt im Fahrzeugzustand bzw. als Flag im Snapshot.
 - **Turbostart online:** Der Client meldet den Zeitpunkt seines Drift-Drucks im Countdown, der Host wertet ihn aus (kommt die Meldung erst nach dem Start an, wird sie sofort angewendet).
 - **Höhen:** Die Physik rechnet die Flughöhe relativ zur Fahrbahn; Echos speichern absolute Höhen, Autos auf verschiedenen Ebenen (Brücke) berühren sich nicht; auch Hacks (Schockwelle, Barriere, Klon), Windschatten, Knapp-Bonus und die KI-Zielwahl prüfen die absolute Höhe.
-- **Protokoll-Version 5:** Unterschiedliche Spielversionen werden beim Beitreten erkannt (Hinweis „bitte neu laden“).
+- **Protokoll-Version 6:** Unterschiedliche Spielversionen werden beim Beitreten erkannt (Hinweis „bitte neu laden“).
 - **Strecken-Abstimmung:** Stimmen laufen als `cfg`-Nachricht zum Host und mit der Lobby an alle zurück. Beim Start lost der Host aus allen Stimmen (ohne Stimmen: aus allen Strecken), schickt `roulette` (Lose, Gewinner, Dauer) – alle Geräte zeigen dieselbe Animation – und startet danach das Rennen; die Stimmen werden für die nächste Runde zurückgesetzt.
 - **Echo-Daten:** 20 Abtastpunkte pro Sekunde als `Int16` (x/z auf 10 cm, Höhe auf 1 cm, Richtung auf 0,1 mrad), Base64-kodiert – eine 30-s-Runde sind ≈ 6 KB. Host und Clients nutzen exakt dieselben dekodierten Daten.
 - Verlässt ein Client das Rennen, übernimmt die KI sein Auto. Verlässt der Host, endet der Raum für alle.
@@ -287,11 +289,6 @@ Misst die beste Runde der schweren KI im Zeitfahren je Strecke und Auto (Grundla
 node scripts/track-preview.mjs vorschau.png
 ```
 Zeichnet alle Strecken (Ideallinie, Kurven, Boostfelder, Kreuzungen) als Bild und prüft Mindestabstände.
-
-```bash
-npm run icons
-```
-Erzeugt die App-Icons neu.
 
 Schlechtes Netz simulieren: in der Browser-Konsole `window.__netLag = 70` (ms je Richtung) und `window.__netLoss = 0.05` (Verlustrate) setzen.
 

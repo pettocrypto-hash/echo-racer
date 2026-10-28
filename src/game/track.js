@@ -43,12 +43,16 @@ function smoothCircular(arr, r) {
   return out;
 }
 
+// Alle Strecken etwas breiter als in den Bauplänen: +25 % der Breite, mindestens 2,2 m, höchstens 3,5 m
+// (schmale Abschnitte gewinnen relativ am meisten, die ohnehin breite Wolkenarena am wenigsten)
+const widen = (w) => w + clamp(w * 0.25, 2.2, 3.5);
+
 export class Track {
   constructor(def) {
     this.def = def;
     this.id = def.id;
     const sc = def.scale || 1;
-    const P = def.points.map((p) => [p[0] * sc, p[1] * sc, p[2] ?? def.width]);
+    const P = def.points.map((p) => [p[0] * sc, p[1] * sc, widen(p[2] ?? def.width)]);
     const n = P.length;
 
     // 1) Dichte Spline-Polylinie

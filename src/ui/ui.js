@@ -3,7 +3,7 @@
 import qrcode from 'qrcode-generator';
 import { CARS, HACKS, PLAYER_COLORS, AI_LEVELS, MAX_CARS, CHARACTERS, FLAMES, CLASSES } from '../config.js';
 import { TRACK_DEFS, mirrorId, medalFor, medalTimes, MEDALS } from '../game/trackDefs.js';
-import { settings, saveSettings, loadRecord, enterFullscreen, isFullscreen, isTouch } from '../platform.js';
+import { settings, saveSettings, loadRecord, isTouch } from '../platform.js';
 import { fmtTime } from '../util.js';
 import { getTrack } from '../session.js';
 import { PAINTS, ACHIEVEMENTS, progress, achProgress, paintUnlocked, paintUnlockHint, levelInfo, dailyChallenge, dailyDoneToday, currentStreak, medalCount, todayKey, flameUnlocked, nextReward, missionsToday, missionText, missionCount, classUnlocked, gpCup } from '../progress.js';
@@ -150,7 +150,6 @@ export class UI {
           </div>
         </nav>
       </div>
-      <button class="fs-btn">⛶ Vollbild</button>
       <div class="ver">v1.0 · Querformat · ${isTouch ? 'Touch' : 'Tastatur/Gamepad'}</div>`
     );
     t.querySelectorAll('[data-go]').forEach((b) =>
@@ -168,10 +167,6 @@ export class UI {
     t.querySelector('.daily').addEventListener('click', () => {
       this.click();
       app.startDaily();
-    });
-    t.querySelector('.fs-btn').addEventListener('click', () => {
-      this.click();
-      enterFullscreen();
     });
 
     // ---------- Solo ----------

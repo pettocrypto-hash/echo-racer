@@ -213,7 +213,7 @@ export function trackDefById(id) {
 
 // Medaillenzeiten fürs Zeitfahren (beste Runde in s), gemessen mit scripts/medal-times.mjs:
 // Gold = schwere KI im Allrounder, Echo-Medaille = schnellstes KI-Auto minus 1,5 %. Gespiegelt gelten dieselben Zeiten.
-const MEDAL_BASE = { neon: [22.4, 20.8], canyon: [23.9, 21.6], sky: [22.7, 20.9], lava: [31.0, 28.6], garden: [20.2, 18.4] };
+const MEDAL_BASE = { neon: [22.2, 19.9], canyon: [23.6, 21.4], sky: [22.6, 20.7], lava: [30.8, 28.4], garden: [19.8, 17.8] };
 export const MEDALS = [
   { id: 'echo', name: 'Echo', icon: '◆', color: '#7df4ff' },
   { id: 'gold', name: 'Gold', icon: '●', color: '#ffc93d' },

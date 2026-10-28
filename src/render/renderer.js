@@ -17,12 +17,17 @@ uniform sampler2D tSrc;
 uniform vec2 uTexel;
 uniform float uThreshold;
 varying vec2 vUv;
+vec3 tapW(vec2 o, inout float wsum) {
+  vec3 s = texture2D(tSrc, vUv + uTexel * o).rgb;
+  float w = 1.0 / (1.0 + max(max(s.r, s.g), s.b));
+  wsum += w;
+  return s * w;
+}
 void main() {
-  vec3 c = texture2D(tSrc, vUv + uTexel * vec2(-1.0, -1.0)).rgb;
-  c += texture2D(tSrc, vUv + uTexel * vec2(1.0, -1.0)).rgb;
-  c += texture2D(tSrc, vUv + uTexel * vec2(-1.0, 1.0)).rgb;
-  c += texture2D(tSrc, vUv + uTexel * vec2(1.0, 1.0)).rgb;
-  c *= 0.25;
+  // Gewichtung 1/(1+Helligkeit): einzelne grelle Pixel (Glanzpunkte) dominieren nicht → kein Glitzer-Flackern im Bloom
+  float wsum = 0.0;
+  vec3 c = tapW(vec2(-1.0, -1.0), wsum) + tapW(vec2(1.0, -1.0), wsum) + tapW(vec2(-1.0, 1.0), wsum) + tapW(vec2(1.0, 1.0), wsum);
+  c /= max(wsum, 1e-4);
   float br = max(max(c.r, c.g), c.b);
   float knee = 0.35;
   float soft = clamp(br - uThreshold + knee, 0.0, 2.0 * knee);
@@ -283,6 +288,9 @@ class AdaptiveResolution {
     if (this.ceilT > 0) this.ceilT -= 0.5;
     if (avg > 18.6) {
       this.goodT = 0;
+      this.slowT = (this.slowT || 0) + 0.5;
+      if (avg <= 26 && this.slowT < 1) return null;
+      this.slowT = 0;
       if (this.scale > this.min + 1e-3) {
         const prev = this.scale;
         this.scale = Math.max(this.min, this.scale - (avg > 26 ? 0.12 : 0.06));
@@ -299,9 +307,10 @@ class AdaptiveResolution {
       }
     } else if (avg < 17.3) {
       this.badT = 0;
+      this.slowT = 0;
       this.goodT += 0.5;
       const cap = Math.min(this.max, this.ceilT > 0 ? this.ceiling : this.max);
-      if (this.goodT >= 2 && this.scale < cap - 1e-3) {
+      if (this.goodT >= 3 && this.scale < cap - 1e-3) {
         this.scale = Math.min(cap, this.scale + (this.scale < 1 ? 0.05 : 0.1));
         this.goodT = 0;
         this.raisedAgo = 0;
@@ -537,12 +546,22 @@ export class Renderer {
     const h = Math.max(1, Math.floor(ch * pr));
     this.cssW = cw;
     this.cssH = ch;
+    // Die Leinwand bleibt fest auf Geräteauflösung (max. 2×); die adaptive Renderskala ändert nur die internen
+    // Puffer, der Kompositpass skaliert auf die Leinwand. So wird die Leinwand beim Nachregeln nicht geleert
+    // (kein Aufblitzen auf Handys) und Supersampling wird im Shader herunterskaliert.
+    const cpr = Math.min(2, base);
+    const cwp = Math.max(1, Math.floor(cw * cpr));
+    const chp = Math.max(1, Math.floor(ch * cpr));
+    if (cwp !== this.canvasW || chp !== this.canvasH) {
+      this.canvasW = cwp;
+      this.canvasH = chp;
+      this.gl.setPixelRatio(1);
+      this.gl.setSize(cwp, chp, false);
+    }
     if (w === this.width && h === this.height && pr === this.pixelRatio) return;
     this.pixelRatio = pr;
     this.width = w;
     this.height = h;
-    this.gl.setPixelRatio(1);
-    this.gl.setSize(w, h, false);
     this._allocTargets();
   }
 
@@ -631,7 +650,7 @@ export class Renderer {
     u.uSat.value = fx.sat;
     u.uContrast.value = fx.contrast;
     // bei abgesenkter Auflösung stärker nachschärfen
-    u.uSharpen.value = fx.sharpen * (1 + (1 - this.adaptive.scale) * 1.6);
+    u.uSharpen.value = fx.sharpen * (1 + Math.max(0, 1 - this.adaptive.scale) * 0.6);
     u.uTexel.value.set(1 / this.width, 1 / this.height);
     u.uShadowTint.value.copy(fx.shadowTint);
     u.uHighTint.value.copy(fx.highTint);

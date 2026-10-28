@@ -95,7 +95,7 @@ function drawTrack(g, toy, mode) {
     const dx = Math.sin(a) * len * AX;
     const dy = Math.cos(a) * len;
     g.lineWidth = 1;
-    g.strokeStyle = H ? 'rgba(80,80,80,0.5)' : `rgba(255,255,255,${(0.05 + rnd() * 0.09).toFixed(3)})`;
+    g.strokeStyle = H ? 'rgba(100,100,100,0.35)' : `rgba(255,255,255,${(0.05 + rnd() * 0.09).toFixed(3)})`;
     g.beginPath();
     g.moveTo(x, y);
     g.lineTo(x + dx, y + dy);
@@ -224,7 +224,6 @@ export function toyTrackNormal() {
     const c = canvas(TS, TS);
     const g = c.getContext('2d');
     drawTrack(g, { track: '#808080', stripe: '#969696' }, 'height');
-    grainPixels(g, 3, 9);
     const src = g.getImageData(0, 0, TS, TS).data;
     const img = g.createImageData(TS, TS);
     const d = img.data;
