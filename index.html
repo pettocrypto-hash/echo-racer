@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0420" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="ECHO RACER – mobiles Arcade-Rennspiel: Deine Runden werden zu Echo-Hindernissen, Streckenhacks statt Items. Solo gegen KI oder online mit Freunden." />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Echo Racer" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <title>ECHO RACER</title>
+  </head>
+  <body>
+    <canvas id="gl"></canvas>
+    <div id="ui"></div>
+    <div id="fps" class="hidden"></div>
+    <div id="rotate">
+      <div class="phone"></div>
+      <b>Bitte Gerät quer halten</b>
+      <span style="color: #b8afdc; font-size: 14px">ECHO RACER wird im Querformat gespielt.</span>
+    </div>
+    <noscript>ECHO RACER benötigt JavaScript.</noscript>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
