@@ -1,7 +1,7 @@
 // Zentrale Spielkonstanten. Werte hier ändern, um das Balancing anzupassen.
 
 export const VERSION = '1.0.0';
-export const PROTOCOL = 7;
+export const PROTOCOL = 8;
 
 export const TICK_RATE = 60;
 export const DT = 1 / TICK_RATE;
