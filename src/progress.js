@@ -48,6 +48,7 @@ const DEFAULT = {
   streakBest: 0,
   tracks: {},
   trackWins: {}, // Siege je Strecke (Spiegelstrecke zählt zur Grundstrecke)
+  kartStats: {}, // je Kart (Index in CARS): r = beendete Rennen, w = Siege
   crowd: 0, // Zuschauer zum Jubeln gebracht
   ach: {},
   medals: {}, // je Strecke die schon mit XP belohnte Medaille (Index in MEDALS)
@@ -88,12 +89,12 @@ function load() {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const p = JSON.parse(raw);
-      return { ...DEFAULT, ...p, tracks: { ...(p.tracks || {}) }, trackWins: { ...(p.trackWins || {}) }, ach: { ...(p.ach || {}) }, medals: { ...(p.medals || {}) } };
+      return { ...DEFAULT, ...p, tracks: { ...(p.tracks || {}) }, trackWins: { ...(p.trackWins || {}) }, kartStats: { ...(p.kartStats || {}) }, ach: { ...(p.ach || {}) }, medals: { ...(p.medals || {}) } };
     }
   } catch {
     /* privater Modus o.ä. */
   }
-  return { ...DEFAULT, tracks: {}, trackWins: {}, ach: {}, medals: {} };
+  return { ...DEFAULT, tracks: {}, trackWins: {}, kartStats: {}, ach: {}, medals: {} };
 }
 
 export const progress = load();
@@ -466,6 +467,12 @@ export function recordRace({ row, trackId, trackLength, mode, total, photoWin })
       const base = trackId.replace(/~m$/, '');
       if (!progress.trackWins) progress.trackWins = {};
       progress.trackWins[base] = (progress.trackWins[base] || 0) + 1;
+    }
+    if (row.car != null) {
+      if (!progress.kartStats) progress.kartStats = {};
+      const ks = (progress.kartStats[row.car] = progress.kartStats[row.car] || { r: 0, w: 0 });
+      ks.r++;
+      if (row.rank === 1) ks.w++;
     }
     if (row.rank <= 3) progress.podiums++;
     if (row.rank === 1 && photoWin) progress.photoWins++;

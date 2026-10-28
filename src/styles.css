@@ -2162,6 +2162,13 @@ input {
   font-size: 15px;
 }
 
+/* Bilanz je Kart (Garage) */
+.cstat {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 /* Siege je Strecke (Solo-Auswahl) */
 .twins {
   position: absolute;

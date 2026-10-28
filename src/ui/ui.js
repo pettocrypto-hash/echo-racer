@@ -370,7 +370,7 @@ export class UI {
         <div class="car-list">${CARS.map((c, i) => `<button data-i="${i}"><b>${c.name}</b><small>${c.role}</small></button>`).join('')}</div>
         <div class="car-stage"></div>
         <div class="car-info">
-          <h2 class="cname"></h2><p class="crole"></p>
+          <h2 class="cname"></h2><p class="crole"></p><p class="cstat"></p>
           <div class="stats">${STAT_DEFS.map(([n]) => `<div class="stat"><span>${n}</span><i><b></b></i></div>`).join('')}</div>
           <div class="drivers"><span>Fahrer</span><div class="drv-row">${CHARACTERS.map((c, i) => `<button data-d="${i}" title="${c.desc}">${app.portraits ? `<img src="${app.portraits[i].url}" alt="">` : ''}<small>${c.name}</small></button>`).join('')}</div></div>
           <div class="paints"><span>Lack</span><div class="paint-row">${PAINTS.map((p) => `<button data-p="${p.id}" title="${p.name}"><i class="sw sw-${p.id}"></i><small>${p.name}</small></button>`).join('')}</div><p class="paint-hint"></p></div>
@@ -843,6 +843,9 @@ export class UI {
     s.querySelectorAll('.car-list button').forEach((b) => b.classList.toggle('on', +b.dataset.i === i));
     s.querySelector('.cname').textContent = c.name;
     s.querySelector('.crole').textContent = c.role;
+    // Bilanz mit diesem Kart (beendete Rennen gegen andere, Siege)
+    const ks = (progress.kartStats || {})[i];
+    s.querySelector('.cstat').textContent = ks && ks.r ? `🏁 ${ks.r} ${ks.r === 1 ? 'Rennen' : 'Rennen'} · 🏆 ${ks.w} ${ks.w === 1 ? 'Sieg' : 'Siege'}` : 'Noch kein Rennen mit diesem Kart';
     s.querySelectorAll('.stat i b').forEach((b, k) => {
       const v = Math.max(0.06, Math.min(1, STAT_DEFS[k][1](c)));
       b.style.width = Math.round(v * 100) + '%';
