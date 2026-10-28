@@ -117,7 +117,7 @@ Umschalten zwischen Touch-Lenkrad und Neigung in **Einstellungen → Steuerung**
 ### Strecken und Fahrzeuge
 | Strecke | Welt | Besonderheit |
 |---|---|---|
-| Neon-Hafen | Orange Bahn über einem Spielteppich mit Neon-Hochhäusern (Dachaufbauten, blinkende Antennen), Werbetafeln, fliegenden Autos, Straßenverkehr mit Schein- und Rücklichtern und Straßenlaternen | Lange Geraden – Windschatten und Echo-Ketten |
+| Neon-Hafen | Orange Bahn über einem Spielteppich mit Neon-Hochhäusern (Dachaufbauten, blinkende Antennen), Werbetafeln, fliegenden Autos, Straßenverkehr mit Schein- und Rücklichtern, Straßenlaternen und **Suchscheinwerfern**, die über den Nachthimmel schwenken | Lange Geraden – Windschatten und Echo-Ketten |
 | Canyon-Klamm | Blaue Bahn durch eine Wüste mit gewellten Gesteinsschichten, Felsbögen, Tafelbergen, Spielzeug-Kakteen, kreisenden Geiern, rollenden Steppenläufern und **Staubteufeln** (Sandwirbel, die abseits der Bahn entstehen, wandern und vergehen) | Zwei enge Schluchten – dort blockieren Echos besonders stark |
 | Wolkenarena | Orange Bahn zwischen schwebenden Inseln (Felszapfen, Bäumchen, Kristalle, Wasserfälle), Wolken, Heißluftballons, Möwenschwärmen und einem **Regenbogen** gegenüber der Sonne | Sehr breite Arenen mit 9 Boostfeldern – Hacks dominieren |
 | Lava-Kreuz | Türkise Bahn über Lavafeldern mit Fontänen, glühenden Kristallen und rauchendem Vulkan mit Lavaströmen | Eine Acht mit Kreuzung – Echos schneiden deine Linie |

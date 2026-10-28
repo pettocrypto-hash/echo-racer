@@ -1414,6 +1414,56 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
         meshes.push(traffic);
       }
     }
+    // Suchscheinwerfer: Lichtfinger schwenken langsam über den Nachthimmel (additiv, zur Spitze hin verblassend)
+    {
+      const beamGeo = new THREE.CylinderGeometry(7, 0.5, 240, 20, 1, true);
+      beamGeo.translate(0, 120, 0);
+      const beamMat = new THREE.ShaderMaterial({
+        uniforms: { uCol: { value: new THREE.Color('#bfe4ff') } },
+        vertexShader: /* glsl */ `
+          varying float vH;
+          varying vec3 vN;
+          varying vec3 vV;
+          void main() {
+            vH = position.y / 240.0;
+            vec4 mv = modelViewMatrix * vec4(position, 1.0);
+            vN = normalize(normalMatrix * normal);
+            vV = normalize(-mv.xyz);
+            gl_Position = projectionMatrix * mv;
+          }`,
+        fragmentShader: /* glsl */ `
+          uniform vec3 uCol;
+          varying float vH;
+          varying vec3 vN;
+          varying vec3 vV;
+          void main() {
+            // zur Kegelmitte (Blick quer) heller, an der Silhouette und nach oben weich auslaufend
+            float core = pow(abs(dot(normalize(vN), normalize(vV))), 1.5);
+            float a = core * (1.0 - vH) * (1.0 - vH) * smoothstep(0.0, 0.03, vH) * 0.22;
+            gl_FragColor = vec4(uCol * a, 1.0);
+          }`,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+      });
+      const lights = [];
+      for (let i = 0; i < n(4); i++) {
+        const a = (i / n(4)) * Math.PI * 2 + rnd() * 0.6;
+        const r = radius + 90 + rnd() * 80;
+        const m = new THREE.Mesh(beamGeo, beamMat);
+        m.position.set(cx + Math.cos(a) * r, gy, cz + Math.sin(a) * r);
+        m.frustumCulled = false;
+        meshes.push(m);
+        lights.push({ m, ph: rnd() * 6.3, sp: 0.18 + rnd() * 0.14 });
+      }
+      updates.push((t) => {
+        for (const L of lights) {
+          // Kegel kippt 15–35° aus der Senkrechten und kreist langsam
+          L.m.rotation.set(0.26 + Math.sin(t * L.sp * 0.7 + L.ph) * 0.17, t * L.sp + L.ph, 0, 'YXZ');
+        }
+      });
+    }
     // Fliegende Autos über der Stadt
     const fcB = new GeoBuilder();
     fcB.box(0, 0, 0, 1.7, 0.5, 3.4, '#1c1630');
