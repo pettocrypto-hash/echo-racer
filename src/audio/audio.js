@@ -601,6 +601,12 @@ export class AudioEngine {
   play(name, k = 1, delay = 0) {
     if (!this.ready) return;
     switch (name) {
+      case 'backfire':
+        // Fehlzündung: trockener Knall mit kurzem Nachbrodeln
+        this._noise(0.07, 0.36 * k, 'bandpass', 1100, 350, 1.4);
+        this._tone('square', 95, 48, 0.06, 0.16 * k);
+        this._noise(0.12, 0.1 * k, 'lowpass', 600, 200, 1, 0.06);
+        break;
       case 'thunder':
         // ferner Donner: tiefes Grollen, das langsam ausrollt
         this._noise(1.9, 0.24 * k, 'lowpass', 280, 45, 1, delay);

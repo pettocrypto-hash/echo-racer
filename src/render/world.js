@@ -2149,6 +2149,7 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
     }
     torusH.dispose();
     // Rasensprenger nahe der Bahn: zweiarmiger Kopf dreht sich, Wasserbögen aus Tropfen, nasser Fleck im Rasen
+    let wetMat = null;
     for (let i = 0; i < n(2); i++) {
       const p = spot(8, 26, 4);
       if (!p) break;
@@ -2157,7 +2158,28 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
       c.add(BASIC.cyl24, { y: 0.12, sx: 0.85, sy: 0.24, sz: 0.85, color: '#ffd23d', smooth: true });
       c.add(BASIC.cyl12, { y: 0.55, sx: 0.14, sy: 0.75, sz: 0.14, color: '#2fae5a', smooth: true });
       place(c, x, gy, z, 0);
-      plants.add(BASIC.cyl24, { x, y: gy + 0.035, z, sx: 5, sy: 0.04, sz: 5, color: '#35883b', smooth: true });
+      // nasser Rasen: dunkler Fleck mit weich auslaufendem Rand
+      if (!wetMat) {
+        const wc = document.createElement('canvas');
+        wc.width = 128;
+        wc.height = 128;
+        const wg = wc.getContext('2d');
+        // Alpha-Maske liest den Grünkanal: Verlauf in Graustufen (hell = nass), außen schwarz
+        wg.fillStyle = '#000';
+        wg.fillRect(0, 0, 128, 128);
+        const gr = wg.createRadialGradient(64, 64, 0, 64, 64, 64);
+        gr.addColorStop(0, 'rgb(150,150,150)');
+        gr.addColorStop(0.45, 'rgb(120,120,120)');
+        gr.addColorStop(1, 'rgb(0,0,0)');
+        wg.fillStyle = gr;
+        wg.fillRect(0, 0, 128, 128);
+        const wt = new THREE.CanvasTexture(wc);
+        wetMat = new THREE.MeshLambertMaterial({ color: '#2b7232', alphaMap: wt, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 });
+        wetMat.addEventListener('dispose', () => wt.dispose());
+      }
+      const wet = new THREE.Mesh(new THREE.CircleGeometry(5.2, 36).rotateX(-Math.PI / 2), wetMat);
+      wet.position.set(x, gy + 0.05, z);
+      meshes.push(wet);
       const hg = gloss(new GeoBuilder(false, true));
       hg.add(BASIC.box, { sx: 1.5, sy: 0.12, sz: 0.16, color: '#3f8fe0' });
       hg.add(BASIC.cyl12, { sx: 0.2, sy: 0.22, sz: 0.2, color: '#c9cdd6', smooth: true });

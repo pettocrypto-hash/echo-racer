@@ -20,6 +20,9 @@ const TILT = { pitch: 0, roll: 0 };
 const EPROJ = {};
 const WHITE = new THREE.Color(1, 1, 1);
 const SIDES = [-1, 1];
+// Gänge der Verbrenner-Karts (Nova fährt elektrisch, Pixel stufenlos – keine Fehlzündungen)
+const BACKFIRE_GEARS = { komet: 5, viper: 6, glitch: 5, titan: 4 };
+const BF = new THREE.Vector3();
 
 const RAINBOW = new THREE.Color();
 const easeOut = (t) => 1 - Math.pow(1 - t, 3);
@@ -143,7 +146,7 @@ export class RaceView {
       group.add(label);
     }
     this.scene.add(group);
-    return { car, group, tilt, ground, glow, glowMat, shadow, flames, flameMat, flameGeo, flameId: F.id, spark: F.spark, label, trickSpin: 0, ghostSet: false, bob: Math.random() * 10, cheerT: 0, lean: 0, look: 0 };
+    return { car, group, tilt, ground, glow, glowMat, shadow, flames, flameMat, flameGeo, flameId: F.id, spark: F.spark, exhaust: ex, label, trickSpin: 0, ghostSet: false, bob: Math.random() * 10, cheerT: 0, lean: 0, look: 0 };
   }
 
   _makeEchoVis(e) {
@@ -532,6 +535,27 @@ export class RaceView {
     blink(d, v, dt);
     if (cheering) d.head.rotation.x = Math.sin(this.time * 9) * 0.12;
     else d.head.rotation.x = damp(d.head.rotation.x, sad ? 0.38 : 0, sad ? 3 : 8, dt);
+  }
+
+  // Fehlzündung: kurzer Flammenstoß + Rauchwölkchen aus jedem Auspuff (nur in Kameranähe)
+  _backfire(v) {
+    const cam = this.camera.position;
+    const gp = v.group.position;
+    if (Math.abs(cam.x - gp.x) + Math.abs(cam.z - gp.z) > 70) return;
+    const P = this.particles;
+    const h = v.group.rotation.y;
+    const bx = -Math.sin(h);
+    const bz = -Math.cos(h);
+    v.group.updateMatrixWorld(true);
+    for (const [ex, ey, ez] of v.exhaust) {
+      const p = v.tilt.localToWorld(BF.set(ex, ey, ez - 0.15));
+      for (let i = 0; i < 6; i++) {
+        const s = 4 + Math.random() * 4;
+        P.emit(p.x, p.y, p.z, bx * s + (Math.random() - 0.5) * 1.6, 0.3 + Math.random() * 1.2, bz * s + (Math.random() - 0.5) * 1.6, 0.08 + Math.random() * 0.08, 0.36, i < 2 ? '#fff2b0' : '#ff7a1a', 3, 0, 5);
+      }
+      this.smoke.emit(p.x + bx * 0.5, p.y + 0.1, p.z + bz * 0.5, bx * 1.4, 0.6, bz * 1.4, 0.35, 0.28, '#4a4650', 1, -0.6, 2.4);
+    }
+    v.popT = this.time;
   }
 
   // Landung: Stauchung je nach Aufprall-Tempo, Staubkranz um die Räder
@@ -995,6 +1019,15 @@ export class RaceView {
           const bz = z - fz * 1.3 + rz * side * 0.95;
           this.smoke.emit(bx, gyC + 0.3, bz, -fx * 2 + (Math.random() - 0.5) * 1.5, 0.6 + Math.random() * 0.8, -fz * 2 + (Math.random() - 0.5) * 1.5, 0.45 + Math.random() * 0.3, 0.55, this.smokeCol, 1, -0.8, 2.2);
         }
+      }
+      // Fehlzündung beim Hochschalten (gleiche Gangstufen wie der Motorklang) und beim Gaswegnehmen in voller Fahrt
+      const G = BACKFIRE_GEARS[c.stats.id];
+      if (G && !c.ghost) {
+        const gear = Math.min(G - 1, Math.floor(Math.max(0, st.spd / c.stats.top) * G));
+        const thr = c.input ? c.input.throttle ?? 1 : 1;
+        if (!st.air && ((v.gear != null && gear > v.gear) || (v.thr > 0.5 && thr < 0.2 && st.spd > 22))) this._backfire(v);
+        v.gear = gear;
+        v.thr = thr;
       }
       // Regen: Gischt hinter den Hinterrädern – Sprühnebel + feine Tropfen, mit dem Tempo stärker (nur in Kameranähe)
       if (this.rainK && !c.ghost && !st.air && st.spd > 12 && Math.random() < Math.min(1, (st.spd - 12) / 16) * this.rainK) {

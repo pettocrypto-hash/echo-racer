@@ -1078,6 +1078,12 @@ export class RaceSession {
     else if (t > -COUNTDOWN) {
       au.startEngine(c.stats.id);
       au.setEngine(st.spd / c.stats.top, c.input.throttle || 0, st.boostT > 0, !!st.drift, st.driftLvl, !!st.air);
+      // Fehlzündung hörbar, wenn das eigene Kart sie sichtbar macht (Zeitstempel aus der Ansicht)
+      const lv = this.view.carVis.get(c.id);
+      if (lv && lv.popT != null && lv.popT !== this.popHeard) {
+        this.popHeard = lv.popT;
+        au.play('backfire', 0.8 + Math.random() * 0.3);
+      }
       // nächster Gegner in Hörweite brummt mit (Stereo nach Seite, Doppler nach Annäherung)
       let near = null;
       let nd = 40;

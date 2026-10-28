@@ -932,6 +932,54 @@ export function buildPark({ track, grid, rnd, gy, det, glow, solid, meshes, upda
     }
   }
 
+  // ---------- Davonfliegende Luftballons: steigen bei den Fahrgeschäften auf, treiben mit dem Wind davon ----------
+  {
+    const NBL = n(6);
+    const bb = new GeoBuilder();
+    bb.add(BASIC.sphere, { y: 0, sx: 0.55, sy: 0.68, sz: 0.55, color: '#ffffff', smooth: true });
+    bb.add(BASIC.cone5, { y: -0.72, sx: 0.12, sy: 0.14, sz: 0.12, color: '#ffffff' });
+    bb.add(BASIC.box, { y: -1.6, sx: 0.025, sy: 1.6, sz: 0.025, color: '#f4f0e8' });
+    const balloons = new THREE.InstancedMesh(bb.build(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.25, metalness: 0 }), NBL);
+    const BC = ['#ff3b47', '#2f7dff', '#ffd23d', '#3ccf4e'];
+    for (let i = 0; i < NBL; i++) balloons.setColorAt(i, new THREE.Color(BC[i % BC.length]));
+    balloons.frustumCulled = false;
+    meshes.push(balloons);
+    const wind = rnd() * Math.PI * 2;
+    const BL = [];
+    for (let i = 0; i < NBL; i++) BL.push({ ph: i / NBL, per: 38 + rnd() * 14, hub: Math.floor(rnd() * hubs.length), cyc: -1, ox: 0, oz: 0 });
+    const M = new THREE.Matrix4();
+    const P = new THREE.Vector3();
+    const Q = new THREE.Quaternion();
+    const E = new THREE.Euler();
+    const S1 = new THREE.Vector3();
+    updates.push((t) => {
+      for (let i = 0; i < NBL; i++) {
+        const b = BL[i];
+        const f = t / b.per + b.ph;
+        const cyc = Math.floor(f);
+        const k = f - cyc;
+        // jeder Durchgang startet bei einem anderen Fahrgeschäft
+        if (cyc !== b.cyc) {
+          b.cyc = cyc;
+          b.hub = (b.hub + 1 + i) % hubs.length;
+          const a = (cyc * 2.39 + i * 1.7) % (Math.PI * 2);
+          b.ox = Math.cos(a) * (hubs[b.hub].r + 3);
+          b.oz = Math.sin(a) * (hubs[b.hub].r + 3);
+        }
+        const h0 = hubs[b.hub];
+        const drift = k * 45;
+        P.set(h0.x + b.ox + Math.cos(wind) * drift + Math.sin(t * 0.9 + i) * 0.6, gy + 2.4 + k * 95, h0.z + b.oz + Math.sin(wind) * drift + Math.cos(t * 0.8 + i) * 0.6);
+        E.set(Math.sin(t * 1.3 + i) * 0.12, 0, Math.cos(t * 1.1 + i) * 0.12);
+        Q.setFromEuler(E);
+        // kurz aufpoppen, am Ende des Durchgangs hoch oben verschwinden
+        S1.setScalar(Math.max(0.0001, Math.min(1, (1 - k) * 8) * Math.min(1, k * 30)));
+        M.compose(P, Q, S1);
+        balloons.setMatrixAt(i, M);
+      }
+      balloons.instanceMatrix.needsUpdate = true;
+    });
+  }
+
   // ---------- Bäume, Hecken und Rasen ----------
   {
     let placed = 0;
