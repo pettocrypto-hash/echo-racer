@@ -341,9 +341,10 @@ const BUILDERS = [
       r: { r: 0.6, w: 0.6, x: 0.92, z: -1.15 },
       rim: 'chrome', spokes: 10, redline: true,
       head: { x: 0.14, y: 0.33, z: 2.45 }, tail: { y: 0.5, z: -1.88, w: 0.7 },
-      decal: { x: 0.43, y: 0.5, z: -0.45, r: 0.13 },
+      // Startnummer vor dem Sitz (weiter hinten verdeckt sie die Seitenwange der Sitzschale)
+      decal: { x: 0.4, y: 0.48, z: 0.03, r: 0.13 },
       stickers: [
-        { side: [0.42, 0.26, 0.36, 0.72], y: 0.5, z: -0.05, w: 0.32, h: 0.08, id: 'pops' },
+        { side: [0.675, 0, 0.675, 1], y: 1.66, z: -1.55, w: 0.44, h: 0.11, id: 'pops' },
         { top: [-1.76, 1.635, -1.34, 1.635], z: -1.55, w: 1.18, h: 0.1475, id: 'pops', banner: true },
       ],
       seat, steer, exhaust: [[-0.42, 0.75, 0.35], [0.42, 0.75, 0.35]],
