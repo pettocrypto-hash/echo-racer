@@ -2470,6 +2470,58 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
       // Glut im Rauch flackert mit dem Krater
       plume.material.emissiveIntensity = 0.14 + Math.sin(t * 2.1) * 0.05;
     });
+    // Vulkanblitze in der Aschewolke: grelle Zickzack-Fäden, die Wolke leuchtet kurz auf, Donner mit Schall-Laufzeit
+    {
+      const NB = 14;
+      const bpos = new Float32Array(NB * 2 * 2 * 3);
+      const bg = new THREE.BufferGeometry();
+      bg.setAttribute('position', new THREE.BufferAttribute(bpos, 3));
+      const bolt = new THREE.LineSegments(bg, new THREE.LineBasicMaterial({ color: new THREE.Color('#fff0d8').multiplyScalar(3) }));
+      bolt.frustumCulled = false;
+      bolt.visible = false;
+      meshes.push(bolt);
+      let next = 4 + rnd() * 4;
+      let until = -1;
+      const BP = new THREE.Vector3();
+      updates.push((t, camera) => {
+        if (t > next || t < next - 30) {
+          // Blitz von oben nach unten durch die Wolke, zwei leicht versetzte Fäden (wirkt kräftiger)
+          const ph = 0.15 + Math.random() * 0.35;
+          let x = vx + ph * 220 + (Math.random() - 0.5) * 80;
+          let y = gy + 320 + ph * 520 + 60 + Math.random() * 60;
+          let z = vz + ph * 90 + (Math.random() - 0.5) * 60;
+          const len = 90 + Math.random() * 90;
+          for (let k = 0; k < NB; k++) {
+            const nx = x + (Math.random() - 0.5) * 24;
+            const ny = y - len / NB;
+            const nz = z + (Math.random() - 0.5) * 24;
+            for (const [o, j] of [[0, 0], [1.2, 1]]) {
+              const i = (j * NB + k) * 6;
+              bpos[i] = x + o;
+              bpos[i + 1] = y;
+              bpos[i + 2] = z;
+              bpos[i + 3] = nx + o;
+              bpos[i + 4] = ny;
+              bpos[i + 5] = nz;
+            }
+            x = nx;
+            y = ny;
+            z = nz;
+          }
+          bg.setDrawRange(0, NB * 2 * 2);
+          bg.attributes.position.needsUpdate = true;
+          until = t + 0.35;
+          next = t + 5 + Math.random() * 8;
+          if (camera) {
+            const d = camera.position.distanceTo(BP.set(x, y, z));
+            sfx('thunder', Math.min(1, 520 / d), d / 343);
+          }
+        }
+        const on = t < until && Math.sin(t * 70) > -0.4;
+        bolt.visible = on;
+        if (on) plume.material.emissiveIntensity += 0.35;
+      });
+    }
     let fountainT = 0;
     updates.push((t, camera, focus, P) => {
       lavaMat.color.set('#ff5a10').multiplyScalar(2.0 + Math.sin(t * 2.1) * 0.45);

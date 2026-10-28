@@ -601,6 +601,11 @@ export class AudioEngine {
   play(name, k = 1, delay = 0) {
     if (!this.ready) return;
     switch (name) {
+      case 'thunder':
+        // ferner Donner: tiefes Grollen, das langsam ausrollt
+        this._noise(1.9, 0.24 * k, 'lowpass', 280, 45, 1, delay);
+        this._tone('sine', 58, 30, 1.5, 0.16 * k, delay + 0.05);
+        break;
       case 'scooter':
         // Autoscooter-Rums: dumpfer Gummistoß + kurzes Knistern am Stromabnehmer
         this._tone('sine', 115, 55, 0.14, 0.3 * k, delay);
