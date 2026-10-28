@@ -129,7 +129,7 @@ Legende: ✅ umgesetzt · 🔧 in Arbeit · 📋 geplant · 💡 Idee für spät
 - ✅ **Sponsor-Bandenwerbung** mit 16 eigenen Fantasie-Marken (VOLT, KIKO, NYX, RUNE, ECHO FM … + je Welt eine eigene) auf den Leisten, nachts hinterleuchtet.
 - ✅ **Steilkurven** in allen Welten.
 - ✅ **Zuschauer an vielen Stellen:** Balkone mit hüpfenden Steckfiguren und Fähnchen an Schanzen und Kurvenausgängen.
-- ✅ **Werbe-Luftschiff** über jeder Welt, **Autoscooter-Halle** im Lunapark, **Gischt** hinter den Rädern im Regen, **Staubteufel** im Canyon.
+- ✅ **Werbe-Luftschiff** über jeder Welt, **Autoscooter-Halle** im Lunapark, **Gischt** hinter den Rädern im Regen, **Staubteufel** im Canyon, **Rasensprenger** im Garten.
 - ✅ **Motorklang je Kart** (sechs Charaktere) und Aufheulen in der Garage.
 - ✅ **Sechste Welt: Lunapark** am Abend – Riesenrad, Karussell, Kettenkarussell, Freifallturm, Achterbahn mit Zug, Buden, Lichterketten über der Bahn, Feuerwerk und eine Durchfahrt durch ein Zirkuszelt (eigener Streckenverlauf, eigene Rummel-Musik).
 

@@ -277,6 +277,9 @@ export class Particles {
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
+        // das Streifen-Viereck zeigt je nach Flugrichtung mal von der Kamera weg – beidseitig zeichnen,
+        // sonst fehlt etwa die Hälfte aller Funken (z. B. alle, die nach oben fliegen)
+        side: THREE.DoubleSide,
       });
       this.points = new THREE.Mesh(g, this.mat);
     }
@@ -346,10 +349,12 @@ export class Particles {
       this.vx[i] *= dk;
       this.vy[i] = this.vy[i] * dk - this.grav[i] * dt;
       this.vz[i] *= dk;
+      const y0 = this.py[i];
       this.px[i] += this.vx[i] * dt;
       this.py[i] += this.vy[i] * dt;
       this.pz[i] += this.vz[i] * dt;
-      if (this.py[i] < 0.02 && this.grav[i] > 0) {
+      // Aufprall auf Bahnhöhe nur beim Durchqueren von oben (Teilchen der Kulisse tiefer unten fallen frei)
+      if (y0 >= 0.02 && this.py[i] < 0.02 && this.grav[i] > 0) {
         this.py[i] = 0.02;
         this.vy[i] *= -0.35;
       }

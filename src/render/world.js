@@ -2047,6 +2047,41 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
       place(c, p[0], gy, p[1], rnd() * 6, 0.9 + rnd() * 0.3);
     }
     torusH.dispose();
+    // Rasensprenger nahe der Bahn: zweiarmiger Kopf dreht sich, Wasserbögen aus Tropfen, nasser Fleck im Rasen
+    for (let i = 0; i < n(2); i++) {
+      const p = spot(8, 26, 4);
+      if (!p) break;
+      const [x, z] = p;
+      const c = gloss(new GeoBuilder(false, true));
+      c.add(BASIC.cyl24, { y: 0.12, sx: 0.85, sy: 0.24, sz: 0.85, color: '#ffd23d', smooth: true });
+      c.add(BASIC.cyl12, { y: 0.55, sx: 0.14, sy: 0.75, sz: 0.14, color: '#2fae5a', smooth: true });
+      place(c, x, gy, z, 0);
+      plants.add(BASIC.cyl24, { x, y: gy + 0.035, z, sx: 5, sy: 0.04, sz: 5, color: '#35883b', smooth: true });
+      const hg = gloss(new GeoBuilder(false, true));
+      hg.add(BASIC.box, { sx: 1.5, sy: 0.12, sz: 0.16, color: '#3f8fe0' });
+      hg.add(BASIC.cyl12, { sx: 0.2, sy: 0.22, sz: 0.2, color: '#c9cdd6', smooth: true });
+      for (const e of [-0.78, 0.78]) hg.add(BASIC.cyl12, { x: e, y: 0.08, sx: 0.07, sy: 0.18, sz: 0.07, color: '#c9cdd6' });
+      const head = new THREE.Mesh(hg.build(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.3 }));
+      head.position.set(x, gy + 0.98, z);
+      meshes.push(head);
+      const ph = rnd() * 6.3;
+      let emitT = 0;
+      updates.push((t, camera, focus, P) => {
+        const a = ph + t * 2.6;
+        head.rotation.y = a;
+        // Tropfen nur, wenn jemand in der Nähe ist (Teilchen-Budget)
+        if (!P || !focus || Math.hypot(focus.x - x, focus.z - z) > 110) return;
+        if (t - emitT < 0.012) return;
+        emitT = t;
+        for (const e of [1, -1]) {
+          // Düse am Armende, Strahl schräg nach außen-oben und etwas tangential (Rückstoß dreht den Kopf)
+          const ca = Math.cos(a) * e;
+          const sa = -Math.sin(a) * e;
+          const sp = 4.2 + Math.random() * 1.2;
+          P.emit(x + ca * 0.78, gy + 1.1, z + sa * 0.78, ca * sp - sa * 1.6, 3.6 + Math.random() * 1.2, sa * sp + ca * 1.6, 0.8 + Math.random() * 0.25, 0.34, '#cfeeff', 1.2, 9.8, 0.4);
+        }
+      });
+    }
     // Blumentöpfe aus Terrakotta mit Tulpen
     const potG = new THREE.CylinderGeometry(2.4, 1.8, 3.4, 18, 1);
     for (let i = 0; i < n(6); i++) {

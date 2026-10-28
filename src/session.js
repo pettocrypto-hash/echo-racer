@@ -14,6 +14,7 @@ import { H_SHOCK, H_RAM, SHOCK_R } from './game/hacks.js';
 import { RaceView } from './render/view.js';
 import { clamp, lerp, lerpAngle, wrapAngle, round2, round3, fmtTime } from './util.js';
 import { settings, vibrate, loadRecord, saveRecord } from './platform.js';
+import { progress } from './progress.js';
 
 const STYLE_T = 4; // Sekunden, bis eine Stil-Kette ohne neue Aktion endet
 const INTRO = 4.8; // Sekunden Kamerafahrt über die Strecke vor dem Countdown (nur Solo)
@@ -987,6 +988,8 @@ export class RaceSession {
           if (this.daily) hud.toast('★ ' + this.daily.text.toUpperCase(), 'boost');
           const rv = this.sim.cars.find((o) => o.rival);
           if (rv) hud.toast(`⚔ DEIN RIVALE: ${rv.name.toUpperCase()}`, 'hit');
+          // noch nie hier gewonnen: der erste Sieg bringt Bonus-XP
+          if (this.mode === 'race' && this.localId && this.sim.cars.length > 1 && !(progress.trackWins || {})[this.trackId.replace(/~m$/, '')]) hud.toast('🏆 ERSTER SIEG HIER: +40 XP', 'good');
         }
         this.app.audio.play('count');
         vibrate(30);
