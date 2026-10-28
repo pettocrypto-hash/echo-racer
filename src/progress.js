@@ -47,6 +47,8 @@ const DEFAULT = {
   streak: 0,
   streakBest: 0,
   tracks: {},
+  trackWins: {}, // Siege je Strecke (Spiegelstrecke zählt zur Grundstrecke)
+  crowd: 0, // Zuschauer zum Jubeln gebracht
   ach: {},
   medals: {}, // je Strecke die schon mit XP belohnte Medaille (Index in MEDALS)
   missions: null, // Tagesaufträge { key, list, bonus }
@@ -76,6 +78,9 @@ export const ACHIEVEMENTS = [
   { id: 'style', name: 'Stilikone', desc: 'Sammle 5.000 Stil-Punkte in einem einzigen Rennen.', goal: (p) => [Math.min(p.styleBest, 5000), 5000] },
   { id: 'stars3', name: 'Drei Sterne', desc: 'Gewinne einen Grand Prix auf „Schwer" mit drei Sternen.', goal: (p) => [Object.entries(p.gpCups || {}).some(([k, v]) => k.startsWith('2-') && v.stars >= 3) ? 1 : 0, 1] },
   { id: 'marathon', name: 'Marathon', desc: 'Fahre insgesamt 100 km.', goal: (p) => [Math.floor(p.km), 100] },
+  { id: 'parkWin', name: 'Manege frei', desc: 'Gewinne ein Rennen im Lunapark.', goal: (p) => [Math.min(1, (p.trackWins || {}).park || 0), 1] },
+  { id: 'crowd', name: 'Publikumsliebling', desc: 'Bring Zuschauer 25-mal mit Tricks, Sprüngen, Ultra-Boosts oder knappen Manövern zum Jubeln.', goal: (p) => [Math.min(p.crowd || 0, 25), 25] },
+  { id: 'allWins', name: 'Weltmeister', desc: 'Gewinne auf jeder Strecke mindestens ein Rennen.', goal: (p) => [TRACK_DEFS.filter((d) => (p.trackWins || {})[d.id]).length, TRACK_DEFS.length] },
 ];
 
 function load() {
@@ -83,12 +88,12 @@ function load() {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const p = JSON.parse(raw);
-      return { ...DEFAULT, ...p, tracks: { ...(p.tracks || {}) }, ach: { ...(p.ach || {}) }, medals: { ...(p.medals || {}) } };
+      return { ...DEFAULT, ...p, tracks: { ...(p.tracks || {}) }, trackWins: { ...(p.trackWins || {}) }, ach: { ...(p.ach || {}) }, medals: { ...(p.medals || {}) } };
     }
   } catch {
     /* privater Modus o.ä. */
   }
-  return { ...DEFAULT, tracks: {}, ach: {}, medals: {} };
+  return { ...DEFAULT, tracks: {}, trackWins: {}, ach: {}, medals: {} };
 }
 
 export const progress = load();
@@ -454,8 +459,14 @@ export function recordRace({ row, trackId, trackLength, mode, total, photoWin })
   progress.rams += st.rams || 0;
   progress.nearMiss += st.nearMiss || 0;
   progress.shockMax = Math.max(progress.shockMax, st.shockMax || 0);
+  progress.crowd = (progress.crowd || 0) + (st.crowd || 0);
   if (mode !== 'timetrial' && total > 1 && row.finished) {
-    if (row.rank === 1) progress.wins++;
+    if (row.rank === 1) {
+      progress.wins++;
+      const base = trackId.replace(/~m$/, '');
+      if (!progress.trackWins) progress.trackWins = {};
+      progress.trackWins[base] = (progress.trackWins[base] || 0) + 1;
+    }
     if (row.rank <= 3) progress.podiums++;
     if (row.rank === 1 && photoWin) progress.photoWins++;
     if (row.rank === 1 && trackId.endsWith('~m')) progress.mirrorWins++;

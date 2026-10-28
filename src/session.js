@@ -642,6 +642,18 @@ export class RaceSession {
     S.mult = 1;
   }
 
+  // Zuschauer in der Nähe jubeln (Tricks, Sprünge, Ultra-Boosts, knappe Manöver) – zählt für „Publikumsliebling“
+  _crowd(k = 1) {
+    const c = this.localCar;
+    if (!c || this.role === 'demo' || c.finished) return;
+    const t = this.sim.time;
+    if (t - (this.crowdT ?? -9) < 1.5) return;
+    if (!this.view.world.cheerNear(c.st.x, c.st.z, k)) return;
+    this.crowdT = t;
+    c.stat.crowd = (c.stat.crowd || 0) + 1;
+    this.app.audio.play('cheer', 0.5);
+  }
+
   // Ausruf der Figur eines Autos (Stimme je Fahrer)
   _say(id, kind, vol = 1, delay = 0) {
     const c = this.sim.byId.get(id);
@@ -679,6 +691,7 @@ export class RaceSession {
             hud.toast('ULTRA-BOOST!', 'boost');
             this._say(me, 'joy', 0.9);
           }
+          if (ev.data >= 2) this._crowd(0.8);
         }
         break;
       case 'pad':
@@ -716,6 +729,7 @@ export class RaceSession {
           this._style('DURCHBRUCH', 100);
           au.play('smash');
           this._say(me, 'joy', 0.9, 0.1);
+          this._crowd(1);
           vibrate(20);
           hud.toast('DURCHBRUCH!', 'boost');
         }
@@ -736,6 +750,7 @@ export class RaceSession {
         if (isMe) {
           this._style('KNAPP VORBEI', 90);
           au.play('near');
+          this._crowd(0.7);
           hud.toast('KNAPP! +HACK', 'good');
           vibrate(15);
         }
@@ -773,6 +788,7 @@ export class RaceSession {
       case 'jump':
         if (isMe) {
           au.play('launch');
+          this._crowd(0.9);
           if (!this.jumpHint) {
             this.jumpHint = true;
             hud.toast('IN DER LUFT: DRIFT = TRICK!', 'info');
@@ -785,6 +801,7 @@ export class RaceSession {
           au.play('boost');
           hud.toast('TRICK-LANDUNG!', 'boost');
           this._say(me, 'joy', 0.85);
+          this._crowd(1);
         }
         break;
       case 'hardLand':
@@ -976,6 +993,17 @@ export class RaceSession {
         if (this.rankHeld != null && c.rank < this.rankHeld) {
           this._style('ÜBERHOLT', 70 * (this.rankHeld - c.rank));
           this.app.audio.play('spark', 1);
+          if (t - (this.passVoiceT ?? -9) > 4) {
+            this.passVoiceT = t;
+            this._say(c.id, 'happy', 0.7);
+          }
+        } else if (this.rankHeld != null && c.rank > this.rankHeld && t - (this.passVoiceT ?? -9) > 4) {
+          // wer gerade vorbeigezogen ist, neckt – nur wenn er noch nah ist
+          const by = this.sim.cars.find((o) => o.rank === c.rank - 1);
+          if (by && Math.hypot(by.st.x - c.st.x, by.st.z - c.st.z) < 30) {
+            this.passVoiceT = t;
+            this._say(by.id, 'joy', 0.55);
+          }
         }
         this.rankHeld = c.rank;
       }

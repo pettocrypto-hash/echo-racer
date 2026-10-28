@@ -764,6 +764,19 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
     setParticles(P) {
       particles = P;
     },
+    // Zuschauer in der Nähe (Balkone, Tribüne) jubeln lassen; true, wenn jemand in Sichtweite war
+    cheerNear(x, z, k) {
+      let near = false;
+      if (spectators && spectators.spots.some((p) => Math.hypot(p.x - x, p.z - z) < 45)) {
+        spectators.cheer(k);
+        near = true;
+      }
+      if (stand && stand.blockers.some((b) => Math.hypot(b.x - x, b.z - z) < b.r + 30)) {
+        stand.cheer(k);
+        near = true;
+      }
+      return near;
+    },
     // Tribüne jubeln lassen (0..1, klingt von selbst ab)
     cheer(k) {
       if (stand) stand.cheer(k);
