@@ -1,7 +1,7 @@
 // KI-Fahrer: Pure-Pursuit auf einer Ideallinie, Tempo-Profil aus der Krümmung,
 // weicht Autos/Echos/Hacks aus, driftet in langen Kurven und setzt Hacks.
 
-import { AI_LEVELS, HACKS } from '../config.js';
+import { AI_LEVELS, HACKS, BANK_GRIP, BANK_MAX } from '../config.js';
 import { clamp, noise1 } from '../util.js';
 import { H_BARRIER, H_RAMP, H_MIRROR, H_SQUEEZE, H_SHOCK, H_RAM, H_CLONE, SHOCK_R } from './hacks.js';
 
@@ -37,7 +37,9 @@ export class AIDriver {
     const v = new Float32Array(N);
     for (let k = 0; k < N; k++) {
       const kap = Math.abs(tr.curv[k]) * 0.8 + 1e-4;
-      const vmax = (st.turn * m) / (kap + (0.45 * st.turn * m) / st.top);
+      // Steilkurven: mehr Lenkwirkung bei Tempo → höhere Kurvengeschwindigkeit
+      const turn = st.turn * m * (1 + BANK_GRIP * Math.min(1, Math.abs(tr.bank[k]) / BANK_MAX));
+      const vmax = turn / (kap + (0.45 * turn) / st.top);
       v[k] = Math.min(st.top * 1.05, vmax);
     }
     const dec = 21;
@@ -108,6 +110,9 @@ export class AIDriver {
     const wDes = ((2 * Math.sin(alpha)) / dist) * Math.max(spd, 6);
     const g = Math.min(1, spd / 7) * (1 - 0.45 * Math.min(1, spd / this.stats.top));
     let steer = wDes / (this.stats.turn * Math.max(0.25, g));
+    // in Steilkurven lenkt das Kart stärker ein (siehe stepCar) – Lenkeinschlag entsprechend kleiner
+    const bk = tr.bank[c.seg >= 0 ? c.seg : tr.indexAt(c.s)];
+    if (bk * wDes < 0) steer /= 1 + BANK_GRIP * Math.min(1, Math.abs(bk) / BANK_MAX) * Math.min(1, spd / this.stats.top);
     steer += noise1(t * 0.8, this.seed) * this.L.noise;
     steer = clamp(steer, -1, 1);
 
@@ -280,7 +285,7 @@ export class AIDriver {
       const ddx = E.x - c.x;
       const ddz = E.z - c.z;
       if (ddx * ddx + ddz * ddz > (range + 10) * (range + 10)) continue;
-      if (Math.abs(E.y - tr.heightAt(c.s) - c.y) > 2) continue;
+      if (Math.abs(E.y - tr.surfaceY(c.s, c.d) - c.y) > 2) continue;
       // Suchhinweis veraltet, wenn das Echo inzwischen weit gefahren ist → globale Suche
       const far = e.aiX == null || (E.x - e.aiX) ** 2 + (E.z - e.aiZ) ** 2 > 200 * 200;
       tr.project(E.x, E.z, far ? -1 : e.aiSeg, TMP2);

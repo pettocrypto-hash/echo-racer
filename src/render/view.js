@@ -16,6 +16,8 @@ const CPOS = {};
 const Q_TMP = new THREE.Quaternion();
 const SPOS = {};
 const SPROJ = {};
+const TILT = { pitch: 0, roll: 0 };
+const EPROJ = {};
 const WHITE = new THREE.Color(1, 1, 1);
 const SIDES = [-1, 1];
 
@@ -100,17 +102,20 @@ export class RaceView {
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
+    // Unterboden-Leuchten und Schatten liegen auf der Fahrbahn: eigene Gruppe, die nur deren Neigung übernimmt
+    const ground = new THREE.Group();
+    group.add(ground);
     const glow = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 5.4), glowMat);
     glow.rotation.x = -Math.PI / 2;
     glow.position.y = 0.07;
-    group.add(glow);
+    ground.add(glow);
     const shadow = new THREE.Mesh(
       new THREE.PlaneGeometry(2.7, 5.2),
       new THREE.MeshBasicMaterial({ map: shadowTexture(), transparent: true, depthWrite: false, opacity: 0.55 })
     );
     shadow.rotation.x = -Math.PI / 2;
     shadow.position.y = 0.045;
-    group.add(shadow);
+    ground.add(shadow);
     // Boost-Flamme in der gewählten Farbe (Regenbogen wechselt im Update die Farbe)
     const F = FLAMES.find((x) => x.id === c.flame) || FLAMES[0];
     const flameMat = new THREE.MeshBasicMaterial({
@@ -138,7 +143,7 @@ export class RaceView {
       group.add(label);
     }
     this.scene.add(group);
-    return { car, group, tilt, glow, glowMat, shadow, flames, flameMat, flameGeo, flameId: F.id, spark: F.spark, label, trickSpin: 0, ghostSet: false, bob: Math.random() * 10, cheerT: 0, lean: 0, look: 0 };
+    return { car, group, tilt, ground, glow, glowMat, shadow, flames, flameMat, flameGeo, flameId: F.id, spark: F.spark, label, trickSpin: 0, ghostSet: false, bob: Math.random() * 10, cheerT: 0, lean: 0, look: 0 };
   }
 
   _makeEchoVis(e) {
@@ -164,14 +169,18 @@ export class RaceView {
     let height = 2.2;
     if (h.type === H_BARRIER) {
       mesh = new THREE.Mesh(new THREE.BoxGeometry(h.w * 2, 2.2, 0.9), mat);
-      mesh.position.set(h.x, tr.heightAt(h.s) + 1.1, h.z);
-      mat.uniforms.uBottom.value = tr.heightAt(h.s);
-      mesh.rotation.y = h.hd;
+      const by = tr.surfaceY(h.s, h.d ?? 0);
+      const bk = tr.bankAt(h.s);
+      mesh.position.set(h.x, by + 1.1, h.z);
+      mat.uniforms.uBottom.value = by - Math.abs(bk) * h.w;
+      mesh.rotation.set(0, h.hd, -Math.atan(bk), 'YXZ');
     } else if (h.type === H_RAMP) {
       mesh = new THREE.Mesh(wedgeGeometry(h.w * 2, 7.2, 1.5), mat);
-      mesh.position.set(h.x, tr.heightAt(h.s), h.z);
-      mat.uniforms.uBottom.value = tr.heightAt(h.s) - 0.5;
-      mesh.rotation.set(-Math.atan(tr.slopeAt(h.s)), h.hd, 0, 'YXZ');
+      const by = tr.surfaceY(h.s, h.d ?? 0);
+      const bk = tr.bankAt(h.s);
+      mesh.position.set(h.x, by, h.z);
+      mat.uniforms.uBottom.value = by - 0.5 - Math.abs(bk) * h.w;
+      mesh.rotation.set(-Math.atan(tr.slopeAt(h.s)), h.hd, -Math.atan(bk), 'YXZ');
       height = 1.5;
     } else if (h.type === H_MIRROR) {
       const pad = tr.pads[h.pad];
@@ -179,8 +188,8 @@ export class RaceView {
         const p = tr.posAt(pad.s, -pad.d, Q);
         mesh = new THREE.Mesh(new THREE.BoxGeometry(pad.w * 2 + 0.4, 0.35, pad.len + 0.4), mat);
         mesh.position.set(p.x, p.y + 0.17, p.z);
-        mat.uniforms.uBottom.value = p.y - 0.5;
-        mesh.rotation.set(-Math.atan(tr.slopeAt(pad.s)), p.h, 0, 'YXZ');
+        mat.uniforms.uBottom.value = p.y - 0.5 - Math.abs(p.bank) * pad.w;
+        mesh.rotation.set(-Math.atan(tr.slopeAt(pad.s)), p.h, -Math.atan(p.bank), 'YXZ');
         mat.uniforms.uBase.value = 0.08;
         mat.uniforms.uRim.value = 1.1;
         height = 0.35;
@@ -211,11 +220,18 @@ export class RaceView {
     this.scene.add(group);
     const self = this;
     const hacks = this.sim.hacks;
+    let seg = -1;
     return {
       hack: h,
       update(t) {
         const C0 = hacks.shockCenter(h, Math.min(t, h.tE), SPOS);
-        group.position.set(C0.x, h.y ?? self.track.heightAt(self.track.project(C0.x, C0.z, -1, SPROJ).s), C0.z);
+        const pj = self.track.project(C0.x, C0.z, seg, SPROJ);
+        seg = pj.i;
+        // auf der Fahrbahn (mit Querneigung), solange das Zentrum auf derselben Ebene bleibt (Brücke)
+        const onLvl = h.y == null || Math.abs(self.track.heightAt(pj.s) - h.y) < 2.5;
+        const bk = onLvl ? self.track.bankAt(pj.s) : 0;
+        group.position.set(C0.x, onLvl ? self.track.surfaceY(pj.s, pj.d) : h.y, C0.z);
+        group.rotation.set(onLvl ? -Math.atan(self.track.slopeAt(pj.s)) : 0, Math.atan2(pj.tx, pj.tz), -Math.atan(bk), 'YXZ');
         let r;
         let a;
         if (t < h.tA) {
@@ -261,10 +277,11 @@ export class RaceView {
       hack: h,
       update(t) {
         const P = hacks.clonePos(h, t, CPOS);
-        const cy = self.track.heightAt(P.s);
+        const cy = self.track.surfaceY(P.s, P.d);
         mesh.position.set(P.x, cy, P.z);
-        mat.uniforms.uBottom.value = cy;
-        mesh.rotation.y = P.h;
+        mat.uniforms.uBottom.value = cy - 0.4;
+        self._surfaceTilt(P.s, P.h, TILT);
+        mesh.rotation.set(TILT.pitch, P.h, TILT.roll, 'YXZ');
         const u = mat.uniforms;
         u.uTime.value = self.time;
         if (t < h.tA) {
@@ -286,7 +303,7 @@ export class RaceView {
           hacks.clonePos(h, Math.max(h.tA, t - i * TRAIL_STEP), CPOS);
           const q = self.trailPts[i];
           q.x = CPOS.x;
-          q.y = self.track.heightAt(CPOS.s);
+          q.y = self.track.surfaceY(CPOS.s, CPOS.d);
           q.z = CPOS.z;
           q.h = CPOS.h;
         }
@@ -569,6 +586,23 @@ export class RaceView {
     return { group, rotors, rec, pos: new THREE.Vector3(), init: false };
   }
 
+  // Neigung der Fahrbahn bei s für ein Objekt mit Blickrichtung heading (Hang + Steilkurve):
+  // pitch < 0 = Nase hoch (bergauf), roll < 0 = rechte Seite höher – passend zu rotation.x / rotation.z
+  _surfaceTilt(s, heading, out) {
+    const tr = this.track;
+    const k = tr.indexAt(s);
+    const sl = tr.slope[k];
+    const bk = tr.bankAt(s);
+    const fx = Math.sin(heading);
+    const fz = Math.cos(heading);
+    // Gefälle in Blickrichtung und nach rechts (rechts = (-fz, fx); die Streckennormale n zeigt nach rechts)
+    const gF = sl * (fx * tr.tx[k] + fz * tr.tz[k]) + bk * (fx * tr.nx[k] + fz * tr.nz[k]);
+    const gR = sl * (fx * tr.tz[k] - fz * tr.tx[k]) + bk * (fx * tr.nz[k] - fz * tr.nx[k]);
+    out.pitch = -Math.atan(gF);
+    out.roll = -Math.atan(gR);
+    return out;
+  }
+
   _updateDrone(dt, renderTime) {
     const D = this.drone;
     const lead = this.sim.ranked[0];
@@ -576,7 +610,7 @@ export class RaceView {
     const st = lead.st;
     const fx = Math.sin(st.h);
     const fz = Math.cos(st.h);
-    const gy = this.track.heightAt(st.s) + (st.y || 0);
+    const gy = this.track.surfaceY(st.s, st.d || 0) + (st.y || 0);
     // vor dem Führenden, leicht seitlich und erhöht; vor dem Start über der Startlinie
     const ahead = renderTime < 0 ? 16 : 13 + Math.min(10, st.spd * 0.18);
     const tx = st.x + fx * ahead - fz * 4.5;
@@ -789,23 +823,21 @@ export class RaceView {
       const z = lerp(pv.z, st.z, alpha) + (c.visOffZ || 0);
       const y = lerp(pv.y, st.y, alpha);
       const h = lerpAngle(pv.h, st.h, alpha);
-      // Fahrbahnhöhe zwischen den Simulationsschritten interpolieren (kein Treppeneffekt am Hang)
-      const gyC = pv.s == null ? this.track.heightAt(st.s) : lerp(this.track.heightAt(pv.s), this.track.heightAt(st.s), alpha);
+      // Fahrbahnhöhe (mit Querneigung) zwischen den Simulationsschritten interpolieren (kein Treppeneffekt am Hang)
+      const gyC = pv.s == null ? this.track.surfaceY(st.s, st.d) : lerp(this.track.surfaceY(pv.s, pv.d ?? st.d), this.track.surfaceY(st.s, st.d), alpha);
+      const hv = h + st.drift * 0.12;
       v.group.position.set(x, gyC, z);
-      v.group.rotation.y = h + st.drift * 0.12;
+      v.group.rotation.y = hv;
+      // Neigung der Fahrbahn unter dem Kart (Hang + Steilkurve): Kart, Leuchten und Schatten liegen auf
+      this._surfaceTilt(st.s, hv, TILT);
+      v.ground.rotation.set(TILT.pitch, 0, TILT.roll);
       v.bob += dt * (6 + st.spd * 0.2);
       // Drift-Hüpfer: kurzer Hopser beim Driftbeginn
       v.hopT = Math.max(0, (v.hopT || 0) - dt);
       const hop = v.hopT > 0 ? Math.sin(Math.PI * (1 - v.hopT / 0.24)) * 0.32 : 0;
       v.tilt.position.y = y + hop + Math.sin(v.bob) * 0.015 * Math.min(1, st.spd / 20);
-      let roll = clamp(-st.yaw * st.spd * 0.0045, -0.13, 0.13);
-      let pitch = st.brk ? 0.035 : st.boostT > 0 ? -0.04 : 0;
-      {
-        // am Hang mit der Fahrbahn neigen (bergauf Nase hoch)
-        const kS = this.track.indexAt(st.s);
-        const along = Math.sin(h) * this.track.tx[kS] + Math.cos(h) * this.track.tz[kS];
-        pitch -= Math.atan(this.track.slope[kS] * along);
-      }
+      let roll = clamp(-st.yaw * st.spd * 0.0045, -0.13, 0.13) + TILT.roll;
+      let pitch = (st.brk ? 0.035 : st.boostT > 0 ? -0.04 : 0) + TILT.pitch;
       if (st.air) pitch = clamp(-st.vy * 0.025, -0.25, 0.25);
       if (st.trick && st.air) v.trickSpin += dt * 15;
       else v.trickSpin = damp(v.trickSpin, Math.round(v.trickSpin / (Math.PI * 2)) * Math.PI * 2, 12, dt);
@@ -837,6 +869,7 @@ export class RaceView {
         }
         v.car.body.castShadow = false;
         for (const w of v.car.wheels) w.mesh.castShadow = false;
+        if (v.car.stickers) v.car.stickers.visible = false;
       }
 
       // Rammstoß-Schild: Holo-Blase um das Auto, vorne Funken
@@ -883,6 +916,12 @@ export class RaceView {
       if (skidding) {
         const ws = v.car.spec.r;
         if (!v.skid) v.skid = [null, null];
+        // Gefälle der Fahrbahn (Hang + Querneigung) – Spuren liegen auf, auch in Steilkurven
+        const tr = this.track;
+        const kG = tr.indexAt(st.s);
+        const bkG = tr.bankAt(st.s);
+        const gX = tr.slope[kG] * tr.tx[kG] + bkG * tr.nx[kG];
+        const gZ = tr.slope[kG] * tr.tz[kG] + bkG * tr.nz[kG];
         for (let wi = 0; wi < 2; wi++) {
           const side = SIDES[wi];
           const wx = x + fx * ws.z + rx * side * ws.x;
@@ -890,7 +929,8 @@ export class RaceView {
           const prev = v.skid[wi];
           if (!prev) v.skid[wi] = { x: wx, z: wz };
           else if (Math.hypot(wx - prev.x, wz - prev.z) > 0.7) {
-            this.skids.add(prev.x, prev.z, wx, wz, gyC + 0.03, ws.w * 0.8);
+            const yB = tr.surfaceY(st.s, st.d + (wx - x) * tr.nx[kG] + (wz - z) * tr.nz[kG]) + 0.03;
+            this.skids.add(prev.x, prev.z, wx, wz, yB - gX * (wx - prev.x) - gZ * (wz - prev.z), ws.w * 0.8, gX, gZ);
             prev.x = wx;
             prev.z = wz;
           }
@@ -969,7 +1009,10 @@ export class RaceView {
       v.trail.mesh.visible = true;
       e.sample(renderTime, E);
       v.mesh.position.set(E.x, E.y, E.z);
-      v.mesh.rotation.y = E.h;
+      this.track.project(E.x, E.z, v.seg ?? -1, EPROJ);
+      v.seg = EPROJ.i;
+      this._surfaceTilt(EPROJ.s, E.h, TILT);
+      v.mesh.rotation.set(TILT.pitch, E.h, TILT.roll, 'YXZ');
       const age = renderTime - e.t0;
       const solidForMe = e.kind === 'record' ? false : this.localId ? e.solidFor(this.localId) : true;
       let a = Math.min(1, age / 0.8);
@@ -1032,8 +1075,7 @@ export class RaceView {
       const pad = m.userData.pad;
       sim.hacks.padState(pad, this.localId ?? '-', renderTime, PADQ);
       const p = this.track.posAt(pad.s, PADQ.d, Q);
-      m.position.x = p.x;
-      m.position.z = p.z;
+      m.position.set(p.x, p.y + 0.05, p.z);
       if (PADQ.mirror) {
         const ownerCol = this.sim.byId.get(PADQ.owner)?.color || '#ffffff';
         m.material.color.set(PADQ.drain ? '#ff1e3c' : ownerCol).multiplyScalar(2.6 + Math.sin(this.time * 20) * 0.6);
@@ -1202,6 +1244,13 @@ export class RaceView {
     const lz = pos.z + Math.cos(cam.yaw) * look;
     const ly = pos.y + v.tilt.position.y * 0.6 + 1.5 + camY * 0.6;
     this.camera.lookAt(lx, ly, lz);
+    // Steilkurven: Kamera neigt sich halb mit der Fahrbahn (Horizont kippt leicht – mehr Tempogefühl)
+    {
+      const kC = this.track.indexAt(st.s);
+      const gC = this.track.bankAt(st.s) * (Math.sin(cam.yaw) * this.track.nz[kC] - Math.cos(cam.yaw) * this.track.nx[kC]);
+      cam.roll = damp(cam.roll || 0, st.air ? cam.roll || 0 : Math.atan(gC) * 0.5, 4, dt);
+      this.camera.rotateZ(cam.roll);
+    }
 
     this.fovKick = Math.max(0, this.fovKick - dt * 9);
     const aspect = this.renderer.aspect;

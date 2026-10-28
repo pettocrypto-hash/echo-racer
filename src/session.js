@@ -594,6 +594,7 @@ export class RaceSession {
       c.prev.y = st.y;
       c.prev.h = st.h;
       c.prev.s = st.s;
+      c.prev.d = st.d;
     }
   }
 

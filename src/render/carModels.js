@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GeoBuilder, BASIC } from './geo.js';
-import { glowTexture, numberTexture, seatDecalTexture } from './textures.js';
+import { glowTexture, numberTexture, seatDecalTexture, stickerAtlas, stickerUV } from './textures.js';
 import { buildDriver, driverStaticGeometry } from './characters.js';
 import { detailTexture } from './detail.js';
 
@@ -188,6 +188,7 @@ const BUILDERS = [
       rim: 'chrome', spokes: 5, redline: true,
       head: { x: 0.38, y: 0.38, z: 2.05 }, tail: { y: 0.72, z: -1.78, w: 1.0 },
       decal: { x: 0.995, y: 0.5, z: -0.32, r: 0.15 },
+      stickers: [{ side: [0.7, 0.303, 0.5, 0.728], y: 0.5, z: 0.75, w: 0.34, h: 0.085, id: 'volt' }],
       seat, steer, exhaust: [[-0.3, 0.5, -2.0], [0.3, 0.5, -2.0]],
     };
   },
@@ -218,6 +219,11 @@ const BUILDERS = [
       rim: 'chrome', spokes: 8, redline: false,
       head: { x: 0.36, y: 0.3, z: 2.15 }, tail: { y: 0.62, z: -2.02, w: 0.9 },
       decal: { x: 0.96, y: 0.42, z: -0.15, r: 0.15 },
+      stickers: [
+        { side: [0.96, 0.24, 0.88, 0.6], y: 0.42, z: -0.52, w: 0.32, h: 0.08, id: 'rune' },
+        { side: [1.025, 0, 1.025, 1], y: 0.3, z: 2.2, w: 0.4, h: 0.1, id: 'zed' },
+        { top: [-2.14, 1.415, -1.66, 1.415], z: -1.9, w: 1.88, h: 0.235, id: 'zed', banner: true },
+      ],
       seat, steer, exhaust: [[0, 0.5, -2.3]],
     };
   },
@@ -243,6 +249,7 @@ const BUILDERS = [
       rim: 'dark', spokes: 4, redline: false,
       head: { x: 0.4, y: 0.44, z: 1.98 }, tail: { y: 0.44, z: -1.8, w: 1.1 },
       decal: { x: 0.47, y: 0.92, z: -1.32, r: 0.12 },
+      stickers: [{ top: [0.3, 1.0, 1.3, 0.66], z: 0.95, w: 0.52, h: 0.13, id: 'byte', front: true }],
       seat, steer, exhaust: [[-0.35, 0.4, -1.85], [0.35, 0.4, -1.85]],
     };
   },
@@ -270,6 +277,11 @@ const BUILDERS = [
       rim: 'dark', spokes: 6, redline: false, camber: 0.12,
       head: { x: 0.4, y: 0.48, z: 1.64 }, tail: { y: 0.5, z: -1.55, w: 1.1 },
       decal: { x: 0.672, y: 0.4, z: -0.25, r: 0.14 },
+      stickers: [
+        { side: [0.66, 0.24, 0.6, 0.57], y: 0.52, z: 0.45, w: 0.3, h: 0.07, id: 'nyx' },
+        { side: [0.66, 0.24, 0.6, 0.57], y: 0.33, z: -0.62, w: 0.28, h: 0.07, id: 'echofm' },
+        { top: [-1.65, 1.165, -1.19, 1.165], z: -1.42, w: 1.78, h: 0.2225, id: 'nyx', banner: true },
+      ],
       seat, steer, exhaust: [[0.45, 0.4, -1.75]],
     };
   },
@@ -299,6 +311,7 @@ const BUILDERS = [
       rim: 'dark', spokes: 5, treads: true,
       head: { x: 0.48, y: 1.22, z: 1.7 }, tail: { y: 1.2, z: -1.65, w: 1.3 },
       decal: { x: 0.81, y: 1.2, z: 0.0, r: 0.16 },
+      stickers: [{ top: [-1.0, 1.38, 1.33, 1.38], z: 0.85, w: 0.8, h: 0.2, id: 'rune', front: true }],
       seat, steer, exhaust: [[-0.4, 1.0, -1.9], [0.4, 1.0, -1.9]], camY: 0.55, labelY: 3.9,
     };
   },
@@ -329,6 +342,10 @@ const BUILDERS = [
       rim: 'chrome', spokes: 10, redline: true,
       head: { x: 0.14, y: 0.33, z: 2.45 }, tail: { y: 0.5, z: -1.88, w: 0.7 },
       decal: { x: 0.43, y: 0.5, z: -0.45, r: 0.13 },
+      stickers: [
+        { side: [0.42, 0.26, 0.36, 0.72], y: 0.5, z: -0.05, w: 0.32, h: 0.08, id: 'pops' },
+        { top: [-1.76, 1.635, -1.34, 1.635], z: -1.55, w: 1.18, h: 0.1475, id: 'pops', banner: true },
+      ],
       seat, steer, exhaust: [[-0.42, 0.75, 0.35], [0.42, 0.75, 0.35]],
     };
   },
@@ -688,6 +705,84 @@ function beamParts() {
 }
 
 // Komplettes Auto: root (Position/Richtung) > tilt (Neigung/Sprung) > Karosserie, Lichter, Räder
+// Sponsor-Aufkleber als Quads mit Atlas-UVs (stickerAtlas). Seitenaufkleber: { side: [xb, yb, xt, yt] } = Seitenfläche
+// von (xb, yb) unten nach (xt, yt) oben, auf beiden Seiten, Schrift von außen lesbar (links nach hinten, rechts nach
+// vorn). Flache Aufkleber: { top: [z0, y0, z1, y1] } = Oberseite längs z (Haube, Heckflügel), von hinten lesbar
+// (front: true = von vorn lesbar).
+// Jeder Aufkleber ist ein Streifen aus 8 Feldern; seine Punkte werden per Strahl auf die Karosserie gelegt
+// (folgt auch verdrehten Flächen). Ergebnis je Kart-Typ zwischengespeichert.
+const stickerCache = new Map();
+const SRAY = new THREE.Raycaster();
+const SV = new THREE.Vector3();
+const SD = new THREE.Vector3();
+function stickerGeometry(type, list, bodyGeo) {
+  let D0 = stickerCache.get(type);
+  if (!D0) {
+    D0 = stickerArrays(list, bodyGeo);
+    stickerCache.set(type, D0);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(D0.pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(D0.nor, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(D0.uv, 2));
+  g.setIndex(D0.idx);
+  return g;
+}
+
+function stickerArrays(list, bodyGeo) {
+  const pos = [];
+  const nor = [];
+  const uv = [];
+  const idx = [];
+  const body = new THREE.Mesh(bodyGeo);
+  const NU = 8;
+  const OFF = 0.004;
+  const quad = (c, u, v, n, w, h, R) => {
+    const base = pos.length / 3;
+    for (let i = 0; i <= NU; i++) {
+      const a = i / NU - 0.5;
+      for (const b of [-0.5, 0.5]) {
+        const p = [0, 1, 2].map((k) => c[k] + u[k] * a * w + v[k] * b * h);
+        // Punkt auf die Karosserie legen: Strahl von knapp außerhalb entgegen der Normale
+        SRAY.set(SV.set(p[0] + n[0] * 0.06, p[1] + n[1] * 0.06, p[2] + n[2] * 0.06), SD.set(-n[0], -n[1], -n[2]));
+        SRAY.far = 0.14;
+        const hit = SRAY.intersectObject(body, false)[0];
+        if (hit) for (let k = 0; k < 3; k++) p[k] = hit.point.getComponent(k) + n[k] * OFF;
+        else for (let k = 0; k < 3; k++) p[k] += n[k] * OFF;
+        pos.push(p[0], p[1], p[2]);
+        nor.push(n[0], n[1], n[2]);
+        uv.push(R[0] + (R[2] - R[0]) * (a + 0.5), b < 0 ? R[1] : R[3]);
+      }
+    }
+    for (let i = 0; i < NU; i++) {
+      const q = base + i * 2;
+      idx.push(q, q + 2, q + 3, q, q + 3, q + 1);
+    }
+  };
+  for (const s of list) {
+    const R = stickerUV(s.id, s.banner);
+    if (s.side) {
+      const [xb, yb, xt, yt] = s.side;
+      const x = xb + ((xt - xb) * (s.y - yb)) / (yt - yb);
+      const l = Math.hypot(xt - xb, yt - yb);
+      const vx = (xt - xb) / l;
+      const vy = (yt - yb) / l;
+      quad([x, s.y, s.z], [0, 0, -1], [vx, vy, 0], [vy, -vx, 0], s.w, s.h, R);
+      quad([-x, s.y, s.z], [0, 0, 1], [-vx, vy, 0], [-vy, -vx, 0], s.w, s.h, R);
+    } else {
+      const [z0, y0, z1, y1] = s.top;
+      const y = y0 + ((y1 - y0) * (s.z - z0)) / (z1 - z0);
+      const l = Math.hypot(z1 - z0, y1 - y0);
+      const vz = (z1 - z0) / l;
+      const vy = (y1 - y0) / l;
+      // Flügel-Banner von hinten lesbar (Verfolgerkamera), Haubenaufkleber (front) von vorn
+      if (s.front) quad([s.x || 0, y, s.z], [1, 0, 0], [0, -vy, -vz], [0, vz, -vy], s.w, s.h, R);
+      else quad([s.x || 0, y, s.z], [-1, 0, 0], [0, vy, vz], [0, vz, -vy], s.w, s.h, R);
+    }
+  }
+  return { pos, nor, uv, idx };
+}
+
 export function buildCar(type, color, { envK = 1, beams = false, shadows = true, number = null, finish = 'standard', driver = 0 } = {}) {
   const geo = carGeometry(type, color);
   const s = geo.spec;
@@ -760,7 +855,15 @@ export function buildCar(type, color, { envK = 1, beams = false, shadows = true,
     m.position.set(0, s.seat.y + 0.33, s.seat.z - 0.444);
     tilt.add(m);
   }
-  const extra = { brake, brakeMat, numMat, numGeo, seatMat, seatGeo };
+  // Sponsor-Aufkleber (Seiten, Haube, Heckflügel)
+  let stickers = null;
+  let stickerMat = null;
+  if (s.stickers && s.stickers.length) {
+    stickerMat = new THREE.MeshStandardMaterial({ map: stickerAtlas(), alphaTest: 0.5, roughness: 0.32, metalness: 0, envMapIntensity: envK * 0.55, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    stickers = new THREE.Mesh(stickerGeometry(type, s.stickers, geo.body), stickerMat);
+    tilt.add(stickers);
+  }
+  const extra = { brake, brakeMat, numMat, numGeo, seatMat, seatGeo, stickers, stickerMat };
   if (beams) {
     const { beamGeo: bg, beamMat: bm, poolGeo: pg } = beamParts();
     for (const sx of [-1, 1]) {
@@ -796,4 +899,6 @@ export function disposeCar(car) {
   if (car.numGeo) car.numGeo.dispose();
   if (car.seatMat) car.seatMat.dispose();
   if (car.seatGeo) car.seatGeo.dispose();
+  if (car.stickers) car.stickers.geometry.dispose();
+  if (car.stickerMat) car.stickerMat.dispose();
 }

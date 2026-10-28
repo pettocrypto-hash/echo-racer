@@ -2,7 +2,7 @@
 // und auf Clients (Vorhersage des eigenen Autos), daher nur reine Zustandsdaten.
 
 import { clamp, wrapAngle } from '../util.js';
-import { HACK_MAX, DRIFT_LEVEL_TIMES, DRIFT_BOOST, JUMP_LEN } from '../config.js';
+import { HACK_MAX, DRIFT_LEVEL_TIMES, DRIFT_BOOST, JUMP_LEN, BANK_GRIP, BANK_MAX } from '../config.js';
 
 export const CAR_R = 1.05; // Radius der zwei Kollisionskreise
 export const CAR_OFF = 1.0; // Abstand der Kreise von der Fahrzeugmitte
@@ -253,6 +253,9 @@ export function stepCar(c, stats, inp, dt, env, ev) {
       target = dir * (1.25 + 0.6 * clamp(steer * dir, -1, 1)) * stats.drift * Math.min(1, vF / 16);
     } else {
       target = steer * stats.turn * g * (vF < -0.5 ? -1 : 1);
+      // Steilkurve: die geneigte Fahrbahn stützt das Kart – bei Tempo lenkt es stärker in die Kurve hinein
+      const bk = track.bank[c.seg >= 0 ? c.seg : track.indexAt(c.s)];
+      if (bk * steer < 0) target *= 1 + BANK_GRIP * Math.min(1, Math.abs(bk) / BANK_MAX) * Math.min(1, av / top);
     }
     if (c.wob > 0) target += Math.sin(c.wob * 26) * 1.6 * c.wob;
     c.yaw += (target - c.yaw) * Math.min(1, 12 * dt);
@@ -427,8 +430,8 @@ export function stepCar(c, stats, inp, dt, env, ev) {
         const e = echoes[i];
         if (t < e.t0 || !e.solidFor(env.carId)) continue;
         e.sample(t, E);
-        // Echo-Höhe ist absolut (Brücke/Hügel), das Auto rechnet relativ zur Fahrbahn
-        if (Math.abs(E.y - (track.heightAt(c.s) + c.y)) > 1.3) continue;
+        // Echo-Höhe ist absolut (Brücke/Hügel/Steilkurve), das Auto rechnet relativ zur Fahrbahn
+        if (Math.abs(E.y - (track.surfaceY(c.s, c.d) + c.y)) > 1.3) continue;
         const C = bodyContact(c.x, c.z, c.h, E.x, E.z, E.h);
         if (C.pen <= 0) continue;
         if (c.shieldT > 0) smash(c, ev, 'echo', e.owner);

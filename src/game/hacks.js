@@ -115,7 +115,7 @@ export class HackManager {
     out.h = Math.atan2(out.vx, out.vz);
     out.s = s;
     out.d = d;
-    out.y = p.y;
+    out.y = p.y - d * p.bank; // Ebene (Mittellinie, ohne Querneigung) – für Brücken-Abfragen
     return out;
   }
 
@@ -126,7 +126,7 @@ export class HackManager {
       h.x = p.x;
       h.z = p.z;
       h.hd = p.h;
-      h.y = p.y;
+      h.y = p.y - h.d * p.bank; // Ebene (Mittellinie, ohne Querneigung) – für Brücken-Abfragen
       h.x1 = p.x - p.nx * h.w;
       h.z1 = p.z - p.nz * h.w;
       h.x2 = p.x + p.nx * h.w;

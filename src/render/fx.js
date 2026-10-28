@@ -637,8 +637,8 @@ export class SkidMarks {
     this.mesh.frustumCulled = false;
   }
 
-  // Segment von a nach b (Breite w) auf Höhe y
-  add(ax, az, bx, bz, y, w) {
+  // Segment von a nach b (Breite w); y = Höhe bei a, (gx, gz) = Gefälle der Fahrbahn (Hang + Steilkurve)
+  add(ax, az, bx, bz, y, w, gx = 0, gz = 0) {
     const dx = bx - ax;
     const dz = bz - az;
     const l = Math.hypot(dx, dz) || 1;
@@ -646,7 +646,10 @@ export class SkidMarks {
     const nz = (dx / l) * w * 0.5;
     const i = this.next;
     this.next = (this.next + 1) % this.max;
-    this.pos.set([ax - nx, y, az - nz, ax + nx, y, az + nz, bx - nx, y, bz - nz, bx + nx, y, bz + nz], i * 12);
+    const Y = (x, z) => y + gx * (x - ax) + gz * (z - az);
+    const p = this.pos;
+    p.set([ax - nx, Y(ax - nx, az - nz), az - nz, ax + nx, Y(ax + nx, az + nz), az + nz], i * 12);
+    p.set([bx - nx, Y(bx - nx, bz - nz), bz - nz, bx + nx, Y(bx + nx, bz + nz), bz + nz], i * 12 + 6);
     this.birth.fill(this.time, i * 4, i * 4 + 4);
     this.geo.attributes.position.needsUpdate = true;
     this.geo.attributes.birth.needsUpdate = true;

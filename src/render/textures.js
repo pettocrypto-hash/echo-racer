@@ -1063,3 +1063,594 @@ export function roadArrowTexture() {
     return finish(c, { aniso: 16 });
   });
 }
+
+// Werbebanden: 16 erfundene Sponsoren (eigene Marken, teils nach den Fahrern benannt). Atlas mit 2 × 8 Feldern
+// à 1024 × 128 px – Seitenverhältnis 8:1 wie die Tafeln. Reihenfolge = SPONSOR_IDS (Feld i: Spalte i % 2, Zeile i >> 1)
+export const SPONSOR_IDS = ['volt', 'kiko', 'byte', 'zed', 'mira', 'nyx', 'rune', 'juno', 'echofm', 'toffee', 'glitch', 'pops', 'oase', 'lavalino', 'wolke', 'zwerg'];
+
+const SP_FONT = (weight, px, italic = true, family = 'system-ui, "Segoe UI", Arial, sans-serif') => `${italic ? 'italic ' : ''}${weight} ${px}px ${family}`;
+
+// Schriftzug, der höchstens maxW breit wird; liefert die tatsächliche Breite
+function spText(g, text, x, y, px, maxW, fill, { stroke = null, lw = 0, weight = 900, italic = true, family, align = 'left', shadow = null, glow = null } = {}) {
+  g.font = SP_FONT(weight, px, italic, family);
+  let w = g.measureText(text).width;
+  if (w > maxW) {
+    px = Math.floor((px * maxW) / w);
+    g.font = SP_FONT(weight, px, italic, family);
+    w = g.measureText(text).width;
+  }
+  g.textAlign = align;
+  g.textBaseline = 'middle';
+  if (shadow) {
+    g.fillStyle = shadow;
+    g.fillText(text, x + 4, y + 5);
+  }
+  if (stroke) {
+    g.lineJoin = 'round';
+    g.strokeStyle = stroke;
+    g.lineWidth = lw;
+    g.strokeText(text, x, y);
+  }
+  if (glow) {
+    g.shadowColor = glow;
+    g.shadowBlur = 16;
+  }
+  g.fillStyle = fill;
+  g.fillText(text, x, y);
+  g.shadowBlur = 0;
+  return w;
+}
+
+function spRound(g, x, y, w, h, r) {
+  g.beginPath();
+  if (g.roundRect) g.roundRect(x, y, w, h, r);
+  else g.rect(x, y, w, h);
+}
+
+// Grund: Fläche (Farbe oder Verlauf), feiner Rahmen, leichter Glanz oben (bedrucktes Kunststoffschild)
+function spPlate(g, W, H, bg, frame, bg2 = null) {
+  if (bg2) {
+    const lg = g.createLinearGradient(0, 0, W, 0);
+    lg.addColorStop(0, bg);
+    lg.addColorStop(1, bg2);
+    g.fillStyle = lg;
+  } else g.fillStyle = bg;
+  g.fillRect(0, 0, W, H);
+  const gl = g.createLinearGradient(0, 0, 0, H);
+  gl.addColorStop(0, 'rgba(255,255,255,0.16)');
+  gl.addColorStop(0.45, 'rgba(255,255,255,0.03)');
+  gl.addColorStop(1, 'rgba(0,0,0,0.10)');
+  g.fillStyle = gl;
+  g.fillRect(0, 0, W, H);
+  if (frame) {
+    g.strokeStyle = frame;
+    g.lineWidth = 5;
+    spRound(g, 7, 7, W - 14, H - 14, 14);
+    g.stroke();
+  }
+}
+
+// schräge Streifen am rechten Rand (Renn-Look)
+function spStripes(g, W, H, x0, cols, w = 26) {
+  g.save();
+  g.beginPath();
+  g.rect(x0, 12, W - x0 - 12, H - 24);
+  g.clip();
+  for (let i = 0, x = x0 - H; x < W; i++, x += w) {
+    g.fillStyle = cols[i % cols.length];
+    g.beginPath();
+    g.moveTo(x, H);
+    g.lineTo(x + H, 0);
+    g.lineTo(x + H + w * 0.55, 0);
+    g.lineTo(x + w * 0.55, H);
+    g.closePath();
+    g.fill();
+  }
+  g.restore();
+}
+
+const SPONSOR_DRAW = {
+  volt(g, W, H) {
+    spPlate(g, W, H, '#141414', 'rgba(255,210,61,0.9)');
+    g.fillStyle = '#ffd23d';
+    g.beginPath();
+    g.arc(86, 64, 44, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#141414';
+    g.beginPath();
+    g.moveTo(96, 26);
+    g.lineTo(66, 70);
+    g.lineTo(86, 70);
+    g.lineTo(74, 104);
+    g.lineTo(108, 56);
+    g.lineTo(88, 56);
+    g.closePath();
+    g.fill();
+    const w = spText(g, 'VOLT', 152, 66, 90, 330, '#ffd23d');
+    spText(g, 'BATTERIEN MIT WUMMS', 152 + w + 28, 68, 34, 560, '#ffffff', { weight: 800 });
+    spStripes(g, W, H, 900, ['#ffd23d', '#141414']);
+  },
+  kiko(g, W, H) {
+    spPlate(g, W, H, '#ff9a2e', 'rgba(255,255,255,0.95)', '#ff7a1f');
+    g.fillStyle = '#e2a24f';
+    g.beginPath();
+    g.arc(86, 64, 44, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = '#b8742c';
+    g.lineWidth = 4;
+    g.stroke();
+    g.fillStyle = '#5a3518';
+    for (const [x, y, r] of [[70, 46, 7], [100, 50, 6], [82, 70, 8], [108, 78, 6], [64, 84, 6], [94, 96, 5]]) {
+      g.beginPath();
+      g.ellipse(x, y, r, r * 0.8, 0.6, 0, Math.PI * 2);
+      g.fill();
+    }
+    const w = spText(g, 'KIKO', 152, 64, 92, 320, '#ffffff', { stroke: '#7a4310', lw: 12 });
+    spText(g, 'KNUSPER-KEKSE', 152 + w + 30, 68, 40, 540, '#5a3518', { weight: 900 });
+  },
+  byte(g, W, H) {
+    spPlate(g, W, H, '#06180e', 'rgba(107,255,92,0.75)');
+    g.fillStyle = 'rgba(107,255,92,0.07)';
+    for (let x = 16; x < W - 16; x += 16) for (let y = 16; y < H - 16; y += 16) if ((x * 7 + y * 13) % 5 === 0) g.fillRect(x, y, 12, 12);
+    const P = ['0110110', '1111111', '1111111', '0111110', '0011100', '0001000'];
+    g.fillStyle = '#ff4f6a';
+    P.forEach((row, j) => [...row].forEach((ch, i) => ch === '1' && g.fillRect(52 + i * 11, 33 + j * 11, 10, 10)));
+    g.fillStyle = '#6bff5c';
+    g.fillRect(52, 101, 76, 6);
+    const w = spText(g, 'BYTE BITS', 152, 66, 82, 520, '#6bff5c', { weight: 'bold', italic: false, family: '"Courier New", Consolas, monospace', glow: 'rgba(107,255,92,0.7)' });
+    spText(g, 'PIXEL-CHIPS', 152 + w + 32, 68, 34, 300, '#d8ffd0', { weight: 'bold', italic: false, family: '"Courier New", Consolas, monospace' });
+  },
+  zed(g, W, H) {
+    spPlate(g, W, H, '#ffffff', null);
+    g.fillStyle = '#e8202e';
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.lineTo(190, 0);
+    g.lineTo(150, H);
+    g.lineTo(0, H);
+    g.closePath();
+    g.fill();
+    // Zündkerze: Isolator mit Rippen, Sechskant, Gewinde, Masseelektrode, Funke
+    g.fillStyle = '#ffffff';
+    spRound(g, 70, 12, 28, 48, 9);
+    g.fill();
+    g.fillStyle = '#d8d8e0';
+    for (let y = 22; y < 54; y += 9) g.fillRect(72, y, 24, 3);
+    g.fillStyle = '#9da0ac';
+    g.fillRect(62, 58, 44, 16);
+    g.fillStyle = '#6e717c';
+    g.fillRect(74, 58, 3, 16);
+    g.fillRect(91, 58, 3, 16);
+    g.fillStyle = '#c3c6d0';
+    g.fillRect(72, 74, 24, 22);
+    g.fillStyle = '#8a8d98';
+    for (let y = 78; y < 96; y += 5) g.fillRect(72, y, 24, 2);
+    g.fillStyle = '#c3c6d0';
+    g.fillRect(82, 96, 4, 8);
+    g.fillRect(92, 96, 4, 14);
+    g.fillRect(84, 106, 12, 4);
+    g.fillStyle = '#ffd23d';
+    g.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const r = i % 2 ? 4 : 13;
+      g.lineTo(66 + Math.cos(a) * r, 108 + Math.sin(a) * r);
+    }
+    g.closePath();
+    g.fill();
+    const w = spText(g, 'ZED', 204, 64, 96, 260, '#e8202e');
+    spText(g, 'ZÜNDKERZEN', 204 + w + 30, 68, 40, 440, '#1d1d24', { weight: 900 });
+    spStripes(g, W, H, 880, ['#e8202e', '#ffffff', '#1d1d24', '#ffffff']);
+    g.strokeStyle = '#e8202e';
+    g.lineWidth = 5;
+    spRound(g, 7, 7, W - 14, H - 14, 14);
+    g.stroke();
+  },
+  mira(g, W, H) {
+    spPlate(g, W, H, '#2f7df6', 'rgba(255,255,255,0.95)', '#5aa7ff');
+    g.fillStyle = '#ffffff';
+    g.beginPath();
+    g.moveTo(86, 20);
+    g.bezierCurveTo(112, 54, 122, 70, 122, 82);
+    g.arc(86, 82, 36, 0, Math.PI);
+    g.bezierCurveTo(50, 70, 60, 54, 86, 20);
+    g.fill();
+    g.fillStyle = '#9fd0ff';
+    g.beginPath();
+    g.ellipse(74, 84, 7, 12, -0.3, 0, Math.PI * 2);
+    g.fill();
+    const w = spText(g, 'MIRA', 152, 64, 92, 330, '#ffffff', { shadow: 'rgba(10,40,120,0.35)' });
+    spText(g, 'FRISCHE MILCH', 152 + w + 30, 68, 40, 520, '#ffffff', { weight: 800 });
+    g.fillStyle = 'rgba(255,255,255,0.9)';
+    for (const [x, y, r] of [[930, 40, 16], [968, 76, 22], [900, 92, 12]]) {
+      g.beginPath();
+      g.arc(x, y, r, 0, Math.PI * 2);
+      g.fill();
+    }
+  },
+  nyx(g, W, H) {
+    spPlate(g, W, H, '#1a0836', 'rgba(255,95,208,0.85)', '#3a1170');
+    g.fillStyle = '#ffffff';
+    for (let i = 0; i < 40; i++) {
+      const x = 150 + ((i * 197) % 860);
+      const y = 16 + ((i * 53) % 96);
+      g.globalAlpha = 0.25 + ((i * 7) % 5) / 8;
+      g.fillRect(x, y, 3, 3);
+    }
+    g.globalAlpha = 1;
+    g.save();
+    g.beginPath();
+    g.rect(0, 0, W, H);
+    g.arc(108, 50, 37, 0, Math.PI * 2);
+    g.clip('evenodd');
+    g.fillStyle = '#ffd23d';
+    g.shadowColor = 'rgba(255,210,61,0.7)';
+    g.shadowBlur = 14;
+    g.beginPath();
+    g.arc(86, 64, 42, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+    g.fillStyle = '#ffffff';
+    for (const [x, y, r] of [[116, 92, 3], [128, 70, 2], [104, 104, 2]]) {
+      g.beginPath();
+      g.arc(x, y, r, 0, Math.PI * 2);
+      g.fill();
+    }
+    const w = spText(g, 'NYX', 152, 64, 96, 300, '#ff5fd0', { glow: '#ff5fd0' });
+    spText(g, 'NACHT-COLA', 152 + w + 30, 68, 42, 480, '#ffffff', { weight: 900 });
+  },
+  rune(g, W, H) {
+    spPlate(g, W, H, '#1b1b20', 'rgba(255,255,255,0.6)');
+    g.fillStyle = '#0d0d10';
+    g.beginPath();
+    g.arc(86, 64, 46, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#3a3a44';
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      g.save();
+      g.translate(86 + Math.cos(a) * 40, 64 + Math.sin(a) * 40);
+      g.rotate(a);
+      g.fillRect(-4, -6, 8, 12);
+      g.restore();
+    }
+    g.fillStyle = '#c9ccd6';
+    g.beginPath();
+    g.arc(86, 64, 22, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#6a6e7a';
+    g.beginPath();
+    g.arc(86, 64, 8, 0, Math.PI * 2);
+    g.fill();
+    const w = spText(g, 'RUNE', 152, 64, 92, 320, '#ffffff');
+    spText(g, 'REIFEN · GRIP FÜR JEDE KURVE', 152 + w + 30, 68, 30, 880 - (152 + w + 30) - 16, '#c4c6d0', { weight: 800 });
+    // Zielflaggen-Karos rechts
+    for (let x = 0; x < 6; x++) for (let y = 0; y < 4; y++) {
+      g.fillStyle = (x + y) % 2 ? '#ffffff' : '#1b1b20';
+      g.fillRect(900 + x * 18, 28 + y * 18, 18, 18);
+    }
+  },
+  juno(g, W, H) {
+    spPlate(g, W, H, '#eefbff', 'rgba(11,61,122,0.9)');
+    g.fillStyle = '#2ce7ff';
+    g.fillRect(12, H - 30, W - 24, 10);
+    g.fillStyle = '#0b3d7a';
+    g.beginPath();
+    g.arc(86, 64, 44, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#ffffff';
+    for (let i = 0; i < 4; i++) {
+      g.beginPath();
+      g.moveTo(54, 74 - i * 2);
+      g.quadraticCurveTo(90, 66 - i * 12, 122, 40 + i * 4);
+      g.quadraticCurveTo(96, 72 - i * 8, 58, 82 - i * 2);
+      g.closePath();
+      g.globalAlpha = 1 - i * 0.18;
+      g.fill();
+    }
+    g.globalAlpha = 1;
+    const w = spText(g, 'JUNO JETS', 152, 62, 84, 480, '#0b3d7a');
+    spText(g, 'FLIEG MIT!', 152 + w + 30, 66, 38, 300, '#1e88e5', { weight: 900 });
+  },
+  echofm(g, W, H) {
+    spPlate(g, W, H, '#ff3dd0', 'rgba(255,255,255,0.9)', '#7a2cff');
+    g.fillStyle = 'rgba(255,255,255,0.18)';
+    g.beginPath();
+    g.arc(86, 64, 46, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#ffffff';
+    [14, 30, 52, 70, 46, 26, 12].forEach((h, i) => {
+      spRound(g, 52 + i * 10, 64 - h / 2, 7, h, 3);
+      g.fill();
+    });
+    const w = spText(g, 'ECHO FM', 152, 64, 88, 440, '#ffffff', { shadow: 'rgba(40,0,80,0.35)' });
+    spText(g, 'RADIO 24/7', 152 + w + 30, 68, 40, 360, '#2ce7ff', { weight: 900 });
+  },
+  toffee(g, W, H) {
+    spPlate(g, W, H, '#ffe14d', 'rgba(194,24,91,0.9)');
+    spStripes(g, W, H, 860, ['#ff8ac8', '#ffffff']);
+    g.fillStyle = '#ff4f9e';
+    g.beginPath();
+    g.ellipse(86, 64, 30, 22, 0, 0, Math.PI * 2);
+    g.fill();
+    for (const s of [-1, 1]) {
+      g.beginPath();
+      g.moveTo(86 + s * 26, 64);
+      g.lineTo(86 + s * 50, 42);
+      g.lineTo(86 + s * 46, 64);
+      g.lineTo(86 + s * 50, 86);
+      g.closePath();
+      g.fill();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.75)';
+    g.beginPath();
+    g.ellipse(78, 56, 12, 6, -0.4, 0, Math.PI * 2);
+    g.fill();
+    const w = spText(g, 'TURBO-TOFFEE', 152, 64, 80, 520, '#c2185b');
+    spText(g, 'SAHNEBONBONS', 152 + w + 26, 68, 30, 860 - (152 + w + 26) - 14, '#7a0f3a', { weight: 900 });
+  },
+  glitch(g, W, H) {
+    spPlate(g, W, H, '#ff3dd0', 'rgba(255,255,255,0.9)');
+    g.fillStyle = '#ffc2f0';
+    g.beginPath();
+    g.arc(86, 64, 42, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.9)';
+    g.beginPath();
+    g.ellipse(72, 48, 12, 7, -0.6, 0, Math.PI * 2);
+    g.fill();
+    spText(g, 'GLITCH GUM', 148, 64, 84, 500, 'rgba(44,231,255,0.9)');
+    spText(g, 'GLITCH GUM', 156, 64, 84, 500, 'rgba(255,40,80,0.85)');
+    const w = spText(g, 'GLITCH GUM', 152, 64, 84, 500, '#ffffff');
+    spText(g, 'KAUGUMMI', 152 + w + 30, 68, 40, 890 - (152 + w + 30) - 16, '#3a0a3a', { weight: 900 });
+    g.fillStyle = 'rgba(255,255,255,0.85)';
+    g.fillRect(930, 30, 60, 6);
+    g.fillRect(900, 60, 90, 6);
+    g.fillRect(950, 90, 40, 6);
+  },
+  pops(g, W, H) {
+    spPlate(g, W, H, '#2ce7ff', 'rgba(42,16,96,0.9)');
+    g.fillStyle = 'rgba(255,255,255,0.55)';
+    for (let i = 0; i < 18; i++) {
+      g.beginPath();
+      g.arc(170 + ((i * 263) % 840), 20 + ((i * 41) % 90), 4 + (i % 3), 0, Math.PI * 2);
+      g.fill();
+    }
+    g.fillStyle = '#d9b07a';
+    spRound(g, 80, 74, 12, 40, 5);
+    g.fill();
+    const lg = g.createLinearGradient(0, 18, 0, 84);
+    lg.addColorStop(0, '#ff4f9e');
+    lg.addColorStop(0.5, '#ffd23d');
+    lg.addColorStop(1, '#ff7a1f');
+    g.fillStyle = lg;
+    spRound(g, 60, 18, 52, 66, 24);
+    g.fill();
+    const w = spText(g, 'PIXEL POPS', 152, 64, 84, 500, '#2a1060');
+    spText(g, 'EIS AM STIEL', 152 + w + 30, 68, 38, 320, '#2a1060', { weight: 800 });
+  },
+  oase(g, W, H) {
+    spPlate(g, W, H, '#14a898', 'rgba(255,243,196,0.95)', '#1cc7b4');
+    g.fillStyle = '#ffd23d';
+    g.beginPath();
+    g.arc(92, 58, 34, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = '#2b4a1e';
+    g.lineWidth = 7;
+    g.beginPath();
+    g.moveTo(80, 112);
+    g.quadraticCurveTo(84, 80, 96, 50);
+    g.stroke();
+    g.fillStyle = '#2b6a2a';
+    for (const a of [-2.6, -1.9, -1.2, -0.5, 0.2]) {
+      g.beginPath();
+      g.ellipse(96 + Math.cos(a) * 20, 50 + Math.sin(a) * 12, 24, 7, a, 0, Math.PI * 2);
+      g.fill();
+    }
+    const w = spText(g, 'OASE', 152, 64, 92, 300, '#ffffff', { shadow: 'rgba(0,60,50,0.35)' });
+    spText(g, 'KÜHLE LIMONADE', 152 + w + 30, 68, 40, 480, '#fff3c4', { weight: 900 });
+  },
+  lavalino(g, W, H) {
+    spPlate(g, W, H, '#2a0d08', 'rgba(255,106,26,0.9)', '#4a1206');
+    const fl = (s, c) => {
+      g.fillStyle = c;
+      g.beginPath();
+      g.moveTo(86, 64 - 46 * s);
+      g.bezierCurveTo(86 + 34 * s, 64 - 6 * s, 86 + 30 * s, 64 + 40 * s, 86, 64 + 42 * s);
+      g.bezierCurveTo(86 - 30 * s, 64 + 40 * s, 86 - 36 * s, 64 + 4 * s, 86 - 12 * s, 64 - 20 * s);
+      g.bezierCurveTo(86 - 10 * s, 64 - 4 * s, 86 - 2 * s, 64 - 2 * s, 86, 64 - 46 * s);
+      g.fill();
+    };
+    fl(1, '#ff6a1a');
+    fl(0.62, '#ffd23d');
+    const w = spText(g, 'LAVALINO', 152, 64, 86, 460, '#ff7a1a', { glow: '#ff5a10' });
+    spText(g, 'GLÜH-LIMO', 152 + w + 30, 68, 40, 320, '#ffd23d', { weight: 900 });
+  },
+  wolke(g, W, H) {
+    spPlate(g, W, H, '#8fd3ff', 'rgba(45,111,179,0.85)', '#cbeeff');
+    g.fillStyle = '#ffffff';
+    for (const [x, y, r] of [[64, 72, 22], [86, 58, 28], [112, 70, 22], [88, 80, 22]]) {
+      g.beginPath();
+      g.arc(x, y, r, 0, Math.PI * 2);
+      g.fill();
+    }
+    const w = spText(g, 'WOLKE 7', 152, 64, 90, 400, '#ffffff', { stroke: '#2d7dd2', lw: 12 });
+    spText(g, 'LUFTMATRATZEN', 152 + w + 30, 68, 38, 460, '#2d6fb3', { weight: 900 });
+  },
+  zwerg(g, W, H) {
+    spPlate(g, W, H, '#2f8f3a', 'rgba(255,210,61,0.9)', '#3aa848');
+    g.fillStyle = '#ffe0c4';
+    g.beginPath();
+    g.arc(86, 72, 18, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#ffffff';
+    g.beginPath();
+    g.moveTo(66, 76);
+    g.quadraticCurveTo(86, 124, 106, 76);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#e8202e';
+    g.beginPath();
+    g.moveTo(62, 64);
+    g.lineTo(110, 64);
+    g.lineTo(90, 14);
+    g.closePath();
+    g.fill();
+    const w = spText(g, 'GARTENZWERG', 152, 64, 80, 520, '#ffd23d', { shadow: 'rgba(0,40,0,0.35)' });
+    spText(g, 'ALLES FÜR DEN GARTEN', 152 + w + 26, 68, 28, 300, '#ffffff', { weight: 800 });
+  },
+};
+
+export function sponsorAtlas() {
+  return cached('sponsors', () => {
+    const W = 1024;
+    const H = 128;
+    const c = canvas(2 * W, 8 * H);
+    const g = c.getContext('2d');
+    SPONSOR_IDS.forEach((id, i) => {
+      g.save();
+      g.translate((i % 2) * W, (i >> 1) * H);
+      g.beginPath();
+      g.rect(0, 0, W, H);
+      g.clip();
+      SPONSOR_DRAW[id](g, W, H);
+      g.restore();
+    });
+    return finish(c, { aniso: 16 });
+  });
+}
+
+// Kart-Aufkleber: oben 4 × 4 kompakte Sticker (512 × 128, gestanzter weißer Folienrand, transparent außen),
+// unten 2 × 4 Flügel-Banner (1024 × 128, Gestaltung wie die Werbebanden). Ein Atlas für alle Karts.
+export const STICKER_IDS = ['volt', 'rune', 'zed', 'nyx', 'echofm', 'byte', 'pops', 'kiko', 'juno', 'glitch', 'toffee', 'mira', 'racer', 'turbo', 'hack', 'star'];
+export const BANNER_IDS = ['zed', 'nyx', 'pops', 'volt', 'rune', 'echofm', 'byte', 'juno'];
+
+const STICKER_LOOK = {
+  volt: { bg: '#141414', fg: '#ffd23d', text: 'VOLT', icon: 'bolt' },
+  rune: { bg: '#1b1b20', fg: '#ffffff', text: 'RUNE REIFEN' },
+  zed: { bg: '#ffffff', fg: '#e8202e', text: 'ZED', icon: 'spark', ring: '#e8202e' },
+  nyx: { bg: '#2a0f4f', bg2: '#4a1a8a', fg: '#ff5fd0', text: 'NYX COLA' },
+  echofm: { bg: '#ff3dd0', bg2: '#7a2cff', fg: '#ffffff', text: 'ECHO FM' },
+  byte: { bg: '#06180e', fg: '#6bff5c', text: 'BYTE BITS', mono: true },
+  pops: { bg: '#2ce7ff', fg: '#2a1060', text: 'PIXEL POPS' },
+  kiko: { bg: '#ff8a1f', fg: '#ffffff', text: 'KIKO', stroke: '#7a4310' },
+  juno: { bg: '#eefbff', fg: '#0b3d7a', text: 'JUNO JETS' },
+  glitch: { bg: '#ff3dd0', fg: '#ffffff', text: 'GLITCH GUM', split: true },
+  toffee: { bg: '#ffe14d', fg: '#c2185b', text: 'TURBO-TOFFEE' },
+  mira: { bg: '#2f7df6', bg2: '#5aa7ff', fg: '#ffffff', text: 'MIRA MILCH' },
+  racer: { bg: '#0b0b12', fg: '#2ce7ff', text: '★ ECHO RACER', glow: '#2ce7ff' },
+  turbo: { bg: '#e8202e', fg: '#ffffff', text: 'TURBO', icon: 'chev' },
+  hack: { bg: '#141414', fg: '#6bff5c', text: '</HACK>', mono: true },
+  star: { bg: '#ffd23d', fg: '#141414', text: '★ ★ ★' },
+};
+
+function drawSticker(g, W, H, L) {
+  // gestanzter Folienrand
+  g.fillStyle = '#ffffff';
+  spRound(g, 3, 3, W - 6, H - 6, 30);
+  g.fill();
+  if (L.bg2) {
+    const lg = g.createLinearGradient(0, 0, W, 0);
+    lg.addColorStop(0, L.bg);
+    lg.addColorStop(1, L.bg2);
+    g.fillStyle = lg;
+  } else g.fillStyle = L.bg;
+  spRound(g, 12, 12, W - 24, H - 24, 22);
+  g.fill();
+  const gl = g.createLinearGradient(0, 12, 0, H - 12);
+  gl.addColorStop(0, 'rgba(255,255,255,0.18)');
+  gl.addColorStop(0.5, 'rgba(255,255,255,0)');
+  g.fillStyle = gl;
+  spRound(g, 12, 12, W - 24, H - 24, 22);
+  g.fill();
+  if (L.ring) {
+    g.strokeStyle = L.ring;
+    g.lineWidth = 5;
+    spRound(g, 18, 18, W - 36, H - 36, 18);
+    g.stroke();
+  }
+  let x = W / 2;
+  let maxW = W - 70;
+  if (L.icon) {
+    // Symbol links, Schrift rechts davon zentriert
+    const cx = 74;
+    g.fillStyle = L.fg;
+    g.beginPath();
+    if (L.icon === 'bolt') {
+      g.moveTo(cx + 8, 30);
+      g.lineTo(cx - 16, 68);
+      g.lineTo(cx, 68);
+      g.lineTo(cx - 8, 98);
+      g.lineTo(cx + 18, 56);
+      g.lineTo(cx + 2, 56);
+    } else if (L.icon === 'spark') {
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        const r = i % 2 ? 9 : 30;
+        g.lineTo(cx + Math.cos(a) * r, 64 + Math.sin(a) * r);
+      }
+    } else if (L.icon === 'chev') {
+      for (const dx of [-14, 8]) {
+        g.moveTo(cx + dx - 10, 36);
+        g.lineTo(cx + dx + 12, 64);
+        g.lineTo(cx + dx - 10, 92);
+        g.lineTo(cx + dx - 2, 92);
+        g.lineTo(cx + dx + 20, 64);
+        g.lineTo(cx + dx - 2, 36);
+      }
+    }
+    g.closePath();
+    g.fill();
+    x = (W + 120) / 2;
+    maxW = W - 170;
+  }
+  const opt = { align: 'center', weight: 900 };
+  if (L.mono) Object.assign(opt, { weight: 'bold', italic: false, family: '"Courier New", Consolas, monospace' });
+  if (L.stroke) Object.assign(opt, { stroke: L.stroke, lw: 10 });
+  if (L.glow) opt.glow = L.glow;
+  if (L.split) {
+    spText(g, L.text, x - 4, 66, 70, maxW, 'rgba(44,231,255,0.9)', opt);
+    spText(g, L.text, x + 4, 66, 70, maxW, 'rgba(255,40,80,0.85)', opt);
+  }
+  spText(g, L.text, x, 66, 70, maxW, L.fg, opt);
+}
+
+export function stickerAtlas() {
+  return cached('stickers', () => {
+    const c = canvas(2048, 1024);
+    const g = c.getContext('2d');
+    STICKER_IDS.forEach((id, i) => {
+      g.save();
+      g.translate((i % 4) * 512, (i >> 2) * 128);
+      g.beginPath();
+      g.rect(0, 0, 512, 128);
+      g.clip();
+      drawSticker(g, 512, 128, STICKER_LOOK[id]);
+      g.restore();
+    });
+    BANNER_IDS.forEach((id, i) => {
+      g.save();
+      g.translate((i % 2) * 1024, 512 + (i >> 1) * 128);
+      g.beginPath();
+      g.rect(0, 0, 1024, 128);
+      g.clip();
+      SPONSOR_DRAW[id](g, 1024, 128);
+      g.restore();
+    });
+    return finish(c, { aniso: 16 });
+  });
+}
+
+// UV-Rechteck [u0, v0, u1, v1] eines Stickers bzw. Flügel-Banners im Aufkleber-Atlas (v nach oben, flipY)
+export function stickerUV(id, banner = false) {
+  if (banner) {
+    const i = Math.max(0, BANNER_IDS.indexOf(id));
+    const u0 = (i % 2) * 0.5;
+    const r = 4 + (i >> 1);
+    return [u0 + 0.002, 1 - (r + 1) / 8 + 0.004, u0 + 0.498, 1 - r / 8 - 0.004];
+  }
+  const i = Math.max(0, STICKER_IDS.indexOf(id));
+  const u0 = (i % 4) * 0.25;
+  const r = i >> 2;
+  return [u0 + 0.001, 1 - (r + 1) / 8 + 0.002, u0 + 0.249, 1 - r / 8 - 0.002];
+}

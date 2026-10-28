@@ -67,7 +67,7 @@ export class RaceSim {
       color: e.color,
       rival: !!e.rival,
       st,
-      prev: { x: st.x, z: st.z, y: 0, h: st.h, s: st.s },
+      prev: { x: st.x, z: st.z, y: 0, h: st.h, s: st.s, d: st.d || 0 },
       input: neutralInput(),
       inputTime: null,
       ai: e.kind === 'ai' ? new AIDriver(tr, classStats(CARS[e.car] || CARS[0], this.speed), e.ai ?? 1, idx * 7919 + 13) : null,
@@ -117,6 +117,7 @@ export class RaceSim {
       c.prev.y = c.st.y;
       c.prev.h = c.st.h;
       c.prev.s = c.st.s;
+      c.prev.d = c.st.d;
     }
     if (t < 0) {
       // Turbostart: erster Drift-Druck im letzten Countdown-Abschnitt zählt (Fernfahrer melden ihn per Nachricht)
@@ -158,7 +159,7 @@ export class RaceSim {
       }
       if (this.authority) {
         this._laps(c, t);
-        if (c.rec.active && (this.tick - c.recTick) % ECHO_EVERY === 0) c.rec.sample(c.st, this.track.heightAt(c.st.s) + c.st.y);
+        if (c.rec.active && (this.tick - c.recTick) % ECHO_EVERY === 0) c.rec.sample(c.st, this.track.surfaceY(c.st.s, c.st.d) + c.st.y);
       }
       this._stuck(c, t, dt);
     }
@@ -264,7 +265,7 @@ export class RaceSim {
       c.lapStart = t;
       c.rec.start(t);
       c.recTick = this.tick;
-      c.rec.sample(st, this.track.heightAt(st.s) + st.y);
+      c.rec.sample(st, this.track.surfaceY(st.s, st.d) + st.y);
       this.emit({ type: 'lapStart', id: c.id, t });
     } else {
       const lapTime = t - c.lapStart;
@@ -286,7 +287,7 @@ export class RaceSim {
         c.lapStart = t;
         c.rec.start(t);
         c.recTick = this.tick;
-        c.rec.sample(st, this.track.heightAt(st.s) + st.y);
+        c.rec.sample(st, this.track.surfaceY(st.s, st.d) + st.y);
       }
     }
     c.nextLine += L;

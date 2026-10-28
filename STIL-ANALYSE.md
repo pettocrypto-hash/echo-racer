@@ -87,6 +87,7 @@ Legende: ✅ umgesetzt · 🔧 in Arbeit · 📋 geplant · 💡 Idee für spät
 | Lenkhilfe / Auto-Gas | Optionale Hilfen für Einsteiger | ✅ Auto-Gas; 📋 optionale **Lenkhilfe** (hält von Wänden fern) |
 | Unterwasser / Gleiten / Antigrav | Streckenabschnitte mit anderem Fahrgefühl | ❌ nicht übernommen; 💡 eigene Abschnitte: **Echo-Tunnel**, **Glitch-Zonen** |
 | Abkürzungen | Mit Boost über Gras/Rampen | 💡 Abkürzungen mit Sprungschanze |
+| Steilkurven | Geneigte Kurven, in denen man mehr Tempo halten kann | ✅ Querneigung je nach Kurvenradius (bis ≈ 13°), mehr Lenkwirkung bei Tempo, Kamera neigt sich mit |
 
 ---
 
@@ -124,8 +125,9 @@ Legende: ✅ umgesetzt · 🔧 in Arbeit · 📋 geplant · 💡 Idee für spät
 - ✅ **Ballontrauben + Konfetti** rund um Start/Ziel in allen Welten.
 - ✅ **Blütenblätter/Laub auf der Fahrbahn** (Garten), **Sand-Verwehungen** (Canyon), **Pfützen** (Neon), **Rußflecken** (Lava).
 - ✅ **Texturdichte wie im Vorbild:** feine Detail-Schicht (Gestein mit Rissen, Sand mit Rippeln, Rasenhalme, Laub, Stoff) auf Felsen, Inseln, Böden, Bäumen und Hecken; Bahn (1024 px) und Leisten mit Normal-Maps – Rillen, Fugen, Laschen, Schrauben, Kratzer, Reifenabrieb, eingeprägte Sterne; Lava-Boden als scharfes, glühendes Rissnetz.
-- ✅ **Kart-Details:** Carbon-Gewebe an den Anbauteilen, Reifen mit Straßenprofil, Flankenbeschriftung und Staub, Radmuttern, Startnummer-Aufkleber auf der Sitzlehne.
-- 📋 **Sponsor-Bandenwerbung** mit eigenen Fantasie-Marken (ECHO, GLITCH, HACK, NEON, DRIFT …) entlang der Leisten.
+- ✅ **Kart-Details:** Carbon-Gewebe an den Anbauteilen, Reifen mit Straßenprofil, Flankenbeschriftung und Staub, Radmuttern, Startnummer-Aufkleber auf der Sitzlehne, Sponsor-Aufkleber und Heckflügel-Banner.
+- ✅ **Sponsor-Bandenwerbung** mit 16 eigenen Fantasie-Marken (VOLT, KIKO, NYX, RUNE, ECHO FM … + je Welt eine eigene) auf den Leisten, nachts hinterleuchtet.
+- ✅ **Steilkurven** in allen Welten.
 - 💡 **Sechste Welt** im Stil eines Vergnügungsparks oder einer Stadion-Arena.
 
 ---
@@ -174,3 +176,4 @@ Legende: ✅ umgesetzt · 🔧 in Arbeit · 📋 geplant · 💡 Idee für spät
 8. ✅ Masten mit Stoffbannern, Ballons an Start/Ziel, Kleinkram auf der Fahrbahn
 9. ✅ Tempo-Klassen mit Freischaltung · ✅ Sterne-Bewertung im Grand Prix · ✅ mehr Mimik
 10. ✅ Strecken-Abstimmung online · ✅ Texturdichte/Details (Welt, Karts, Figuren) · 💡 Echo-Arena, sechste Welt
+11. ✅ Steilkurven · ✅ Werbebanden mit eigenen Sponsoren · ✅ Sponsor-Aufkleber und Flügel-Banner an den Karts

@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import { GeoBuilder, BASIC } from './geo.js';
-import { chevronTexture, bannerTexture } from './textures.js';
+import { chevronTexture, bannerTexture, sponsorAtlas, SPONSOR_IDS } from './textures.js';
 
 const FRAME = '#2a2633';
 
@@ -351,6 +351,7 @@ export function buildBannerPoles(track, skip, parts, { RH, RW }, accent, accent2
   const sc = new THREE.Vector3(1, 1, 1);
   const yAxis = new THREE.Vector3(0, 1, 0);
   const mats = [];
+  const spots = [];
   const step = det > 0.8 ? 58 : 90;
   for (let s = 40, side = 1; s < track.length - 50; s += step, side = -side) {
     const k = track.indexAt(s);
@@ -360,6 +361,7 @@ export function buildBannerPoles(track, skip, parts, { RH, RW }, accent, accent2
     parts.add(BASIC.cyl8, { x: r.x, y: r.y + RH + 4, z: r.z, sx: 0.09, sy: 8, sz: 0.09, color: '#2a2633' });
     parts.add(BASIC.box, { x: r.x, y: r.y + RH + 7.9, z: r.z, ry: r.h, sx: 0.07, sy: 0.07, sz: 2.0, color: '#2a2633' });
     parts.add(BASIC.sphere, { x: r.x, y: r.y + RH + 8.1, z: r.z, sx: 0.18, sy: 0.18, sz: 0.18, color: accent2 });
+    spots.push({ x: r.x, z: r.z, r: 1.4 });
     // Banner hängt am Querholm, zeigt zur Bahn
     M.compose(v.set(r.x, r.y + RH + 5.75, r.z), q.setFromAxisAngle(yAxis, r.h + (side > 0 ? -Math.PI / 2 : Math.PI / 2)), sc);
     mats.push(M.clone());
@@ -382,7 +384,7 @@ export function buildBannerPoles(track, skip, parts, { RH, RW }, accent, accent2
   const mesh = new THREE.InstancedMesh(geo, mat, mats.length);
   mats.forEach((m, i) => mesh.setMatrixAt(i, m));
   mesh.frustumCulled = false;
-  return { mesh, dispose: () => [geo, tex, mat].forEach((d) => d.dispose()) };
+  return { mesh, spots, dispose: () => [geo, tex, mat].forEach((d) => d.dispose()) };
 }
 
 // Ballontrauben rund um Start/Ziel: bunte Ballons an Schnüren, wippen leicht
@@ -459,4 +461,123 @@ function mergeGeos(list) {
   out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
   return out;
+}
+
+// Werbebanden: lange, niedrige Tafeln auf den Leisten von Geraden und sanften Kurven mit erfundenen Sponsoren
+// (sponsorAtlas); die Marke der jeweiligen Welt kommt öfter vor. Nachts hinterleuchtet (Leuchtkasten).
+// avoid = belegte Stellen {x, z, r} (Pfeiltafeln, Fahnenmasten) – dort keine Tafel.
+const SPONSOR_WORLD = { neon: 'nyx', canyon: 'oase', sky: 'wolke', lava: 'lavalino', garden: 'zwerg' };
+const SPONSOR_POOL = ['volt', 'kiko', 'byte', 'zed', 'mira', 'nyx', 'rune', 'juno', 'echofm', 'toffee', 'glitch', 'pops'];
+
+export function buildSponsorBoards(track, skip, parts, { RH, RW }, { themeId, night, rnd, avoid = [] }) {
+  const BL = 7.2; // Tafellänge (8:1 wie die Atlas-Felder)
+  const GAP = 0.3; // Abstand zweier Tafeln nebeneinander
+  const y0 = RH + 0.14;
+  const y1 = y0 + 0.9;
+  const TH = 0.07; // Tafeldicke
+  const SEG = 8;
+  const L = track.length;
+  const b = new GeoBuilder(true);
+  const spots = [];
+  const Q = {};
+  const C = {};
+  const own = SPONSOR_WORLD[themeId] || 'nyx';
+  const pool = SPONSOR_POOL.filter((x) => x !== own);
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  let count = 0;
+  let pi = 0;
+  const nextBrand = () => (count++ % 3 === 0 ? own : pool[pi++ % pool.length]);
+  const at = (s, side) => {
+    const hw = track.posAt(s, 0, C).hw;
+    return track.posAt(s, side * (hw + RW * 0.55), Q);
+  };
+  const free = (sA, sB, side) => {
+    for (let s = sA - 2; s <= sB + 2; s += 1) {
+      const k = track.indexAt(s);
+      if (skip(k) || track.crossing[k] || Math.abs(track.curvWide[k]) > 1 / 70) return false;
+    }
+    // Tor-Pfosten der Boostfelder, Sprungschanzen
+    if (track.pads.some((pd) => track.deltaS(sA - 4, pd.s - pd.len / 2) > 0 && track.deltaS(pd.s - pd.len / 2, sB + 4) > 0)) return false;
+    if (track.jumps.some((j) => track.deltaS(sA - 16, j.s) > 0 && track.deltaS(j.s, sB + 22) > 0)) return false;
+    for (let s = sA; s <= sB + 0.01; s += 1.8) {
+      const p = at(s, side);
+      if (avoid.some((a) => Math.hypot(a.x - p.x, a.z - p.z) < a.r + 1.2)) return false;
+    }
+    return true;
+  };
+  const board = (sA, side, id) => {
+    const idx = Math.max(0, SPONSOR_IDS.indexOf(id));
+    const u0 = (idx % 2) * 0.5 + 0.002;
+    const u1 = u0 + 0.496;
+    const vTop = 1 - (idx >> 1) / 8 - 0.004;
+    const vBot = 1 - ((idx >> 1) + 1) / 8 + 0.004;
+    let prev = null;
+    for (let i = 0; i <= SEG; i++) {
+      const t = i / SEG;
+      const p = at(sA + BL * t, side);
+      const ox = p.nx * side * TH * 0.5;
+      const oz = p.nz * side * TH * 0.5;
+      const F0 = [p.x - ox, p.y + y0, p.z - oz];
+      const F1 = [p.x - ox, p.y + y1, p.z - oz];
+      const B0 = [p.x + ox, p.y + y0, p.z + oz];
+      const B1 = [p.x + ox, p.y + y1, p.z + oz];
+      // Schrift von der Bahn aus lesbar: links der Bahn wächst u mit s, rechts umgekehrt
+      const u = side < 0 ? u0 + (u1 - u0) * t : u1 - (u1 - u0) * t;
+      if (prev) {
+        if (side < 0) {
+          b.quad(prev.F0, F0, F1, prev.F1, '#ffffff', 1, [[prev.u, vBot], [u, vBot], [u, vTop], [prev.u, vTop]]);
+          parts.quad(B0, prev.B0, prev.B1, B1, FRAME);
+          parts.quad(prev.F1, F1, B1, prev.B1, FRAME);
+        } else {
+          b.quad(F0, prev.F0, prev.F1, F1, '#ffffff', 1, [[u, vBot], [prev.u, vBot], [prev.u, vTop], [u, vTop]]);
+          parts.quad(prev.B0, B0, B1, prev.B1, FRAME);
+          parts.quad(F1, prev.F1, prev.B1, B1, FRAME);
+        }
+      }
+      // Halter: an den Enden als Rahmen (verdecken die Stirnseiten), in der Mitte hinter der Tafel
+      if (i === 0 || i === SEG) {
+        const sy = y1 + 0.05 - RH;
+        parts.add(BASIC.box, { x: p.x, y: p.y + RH + sy / 2, z: p.z, ry: p.h, sx: TH + 0.08, sy, sz: 0.16, color: FRAME });
+      } else if (i === SEG / 2) {
+        const sy = y1 - 0.1 - RH;
+        const o = side * (TH * 0.5 + 0.05);
+        parts.add(BASIC.box, { x: p.x + p.nx * o, y: p.y + RH + sy / 2, z: p.z + p.nz * o, ry: p.h, sx: 0.1, sy, sz: 0.12, color: FRAME });
+      }
+      if (i % 2 === 0) spots.push({ x: p.x, z: p.z, r: 0.9 });
+      prev = { F0, F1, B0, B1, u };
+    }
+  };
+  let lastSide = 1;
+  for (let s = 64; s < L - 100; ) {
+    const n = rnd() < 0.4 ? 2 : 1;
+    const sB = s + n * BL + (n - 1) * GAP;
+    // in sanften Kurven außen, auf Geraden abwechselnd
+    const cw = track.curvWide[track.indexAt((s + sB) / 2)];
+    let side = Math.abs(cw) > 1 / 220 ? Math.sign(cw) : -lastSide;
+    if (!free(s, sB, side)) {
+      side = -side;
+      if (!free(s, sB, side)) {
+        s += 5;
+        continue;
+      }
+    }
+    for (let c = 0; c < n; c++) board(s + c * (BL + GAP), side, nextBrand());
+    lastSide = side;
+    s = sB + 30 + rnd() * 30;
+  }
+  if (!b.count) return null;
+  const atlas = sponsorAtlas();
+  const mat = new THREE.MeshStandardMaterial({ map: atlas, vertexColors: true, roughness: 0.42, metalness: 0, envMapIntensity: 0.55 });
+  if (night) {
+    // Leuchtkasten: Druck von hinten beleuchtet
+    mat.emissive = new THREE.Color(0xffffff);
+    mat.emissiveMap = atlas;
+    mat.emissiveIntensity = 0.42;
+  }
+  const mesh = new THREE.Mesh(b.build(), mat);
+  mesh.receiveShadow = true;
+  return { mesh, spots, dispose: () => [mesh.geometry, mat].forEach((d) => d.dispose()) };
 }

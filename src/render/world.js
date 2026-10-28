@@ -10,7 +10,7 @@ import {
   lavaTextures, sandTexture, textTexture, billboardAtlas, setAnisotropy, grassTexture, roadArrowTexture,
 } from './textures.js';
 import { mulberry32 } from '../util.js';
-import { buildChevrons, buildGrandstand, buildBannerPoles, buildBalloons } from './trackside.js';
+import { buildChevrons, buildGrandstand, buildBannerPoles, buildBalloons, buildSponsorBoards } from './trackside.js';
 import { JUMP_LEN } from '../config.js';
 import { addDetail } from './detail.js';
 
@@ -258,11 +258,11 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
       const k = track.indexAt(s);
       if (track.crossing[k]) continue;
       const p = track.posAt(s, 0, Q);
-      const h = p.y - T - gy;
-      parts.add(BASIC.box, { x: p.x, y: p.y - T - 0.22, z: p.z, ry: p.h, sx: 2 * (hw[k] + RW) * 0.82, sy: 0.44, sz: 1.1, color: toy.pylon });
+      parts.add(BASIC.box, { x: p.x, y: p.y - T - 0.22, z: p.z, ry: p.h, rz: -Math.atan(p.bank), sx: 2 * (hw[k] + RW) * 0.82, sy: 0.44, sz: 1.1, color: toy.pylon });
       const offs = hw[k] > 9 ? [-hw[k] * 0.55, hw[k] * 0.55] : [0];
       for (const o of offs) {
         const q = track.posAt(s, o, {});
+        const h = q.y - T - gy;
         parts.add(BASIC.cyl8, { x: q.x, y: gy + h / 2, z: q.z, sx: 0.5, sy: h, sz: 0.5, color: toy.pylon });
         parts.add(BASIC.box, { x: q.x, y: gy + 0.15, z: q.z, ry: p.h, sx: 2.2, sy: 0.3, sz: 2.2, color: railDark });
       }
@@ -353,11 +353,13 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
       polygonOffsetFactor: -4,
       polygonOffsetUnits: -4,
     });
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(pd.w * 2, pd.len), mat);
+    const pg = new THREE.PlaneGeometry(pd.w * 2, pd.len);
+    pg.rotateX(-Math.PI / 2);
+    const m = new THREE.Mesh(pg, mat);
     const p = track.posAt(pd.s, pd.d, {});
     m.position.set(p.x, p.y + 0.05, p.z);
-    // am Hang mit der Fahrbahn neigen
-    m.rotation.set(-Math.PI / 2 - Math.atan(track.slopeAt(pd.s)), p.h, 0, 'YXZ');
+    // am Hang und in der Steilkurve mit der Fahrbahn neigen
+    m.rotation.set(-Math.atan(track.slopeAt(pd.s)), p.h, -Math.atan(p.bank), 'YXZ');
     m.userData = { pad: pd, baseColor: col(th.pad, 1.4), heading: p.h };
     root.add(m);
     pads.push(m);
@@ -370,10 +372,11 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
       const q = track.posAt(pd.s - pd.len / 2, side * span, {});
       parts.add(BASIC.box, { x: q.x, y: q.y + RH + 2.0, z: q.z, ry: c.h, sx: 0.45, sy: 4.0, sz: 0.45, color: toy.rail });
     }
-    parts.add(BASIC.box, { x: c.x, y: c.y + RH + 4.2, z: c.z, ry: c.h, sx: span * 2 + 0.45, sy: 0.5, sz: 0.5, color: toy.rail });
-    glow.add(BASIC.box, { x: c.x, y: c.y + RH + 3.85, z: c.z, ry: c.h, sx: span * 2, sy: 0.16, sz: 0.56, color: th.pad, k: 3 });
+    const rz = -Math.atan(c.bank);
+    parts.add(BASIC.box, { x: c.x, y: c.y + RH + 4.2, z: c.z, ry: c.h, rz, sx: span * 2 + 0.45, sy: 0.5, sz: 0.5, color: toy.rail });
+    glow.add(BASIC.box, { x: c.x, y: c.y + RH + 3.85, z: c.z, ry: c.h, rz, sx: span * 2, sy: 0.16, sz: 0.56, color: th.pad, k: 3 });
     const sg = track.posAt(pd.s - pd.len / 2, pd.d, {});
-    glow.add(BASIC.box, { x: sg.x, y: sg.y + RH + 4.75, z: sg.z, ry: c.h, sx: pd.w * 1.4, sy: 0.6, sz: 0.12, color: th.pad, k: 3 });
+    glow.add(BASIC.box, { x: sg.x, y: sg.y + RH + 4.75, z: sg.z, ry: c.h, rz, sx: pd.w * 1.4, sy: 0.6, sz: 0.12, color: th.pad, k: 3 });
   }
 
   // --- Sprungschanzen: Keil über die ganze Bahn, gelbe Fahrfläche mit Pfeilen, Warnstreifen an der Kante ---
@@ -589,6 +592,19 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
       keep(poles);
       updaters.push((t) => (bt.value = t));
     }
+    // Werbebanden auf den Leisten (nicht an Pfeiltafeln und Fahnenmasten); eigener Zufall, damit die übrige
+    // Kulisse unverändert bleibt
+    const boards = buildSponsorBoards(track, skip, parts, { RH, RW }, {
+      themeId,
+      night: !!th.beams,
+      rnd: mulberry32(track.id.length * 131 + N),
+      avoid: [...chev.spots, ...(poles ? poles.spots : [])],
+    });
+    if (boards) {
+      root.add(boards.mesh);
+      keep(boards);
+      blockers.push(...boards.spots);
+    }
     const balloons = buildBalloons(track, { RH, RW }, rnd, det);
     root.add(...balloons.objects);
     keep(balloons);
@@ -786,7 +802,7 @@ function addLoop(surf, rail, parts, p, baseY, R, toy) {
 // Band entlang der Strecke zwischen zwei seitlichen Abständen (flach)
 function ribbon(track, dA, dB, y, vLen, skip = null) {
   const N = track.n;
-  const { px, pz, nx, nz, step } = track;
+  const { px, pz, nx, nz, tx, tz, step, bank, slope } = track;
   const pos = new Float32Array((N + 1) * 6);
   const uv = new Float32Array((N + 1) * 4);
   const nor = new Float32Array((N + 1) * 6);
@@ -797,10 +813,15 @@ function ribbon(track, dA, dB, y, vLen, skip = null) {
     const a = dA(i);
     const b = dB(i);
     const yy = y + track.hy[i];
-    pos.set([px[i] + nx[i] * a, yy, pz[i] + nz[i] * a, px[i] + nx[i] * b, yy, pz[i] + nz[i] * b], k * 6);
+    const bk = bank[i];
+    pos.set([px[i] + nx[i] * a, yy + a * bk, pz[i] + nz[i] * a, px[i] + nx[i] * b, yy + b * bk, pz[i] + nz[i] * b], k * 6);
     const v = (k * step) / vLen;
     uv.set([0, v, 1, v], k * 4);
-    nor.set([0, up, 0, 0, up, 0], k * 6);
+    // Normale der geneigten Fläche (Hang + Steilkurve)
+    const gx = -(slope[i] * tx[i] + bk * nx[i]);
+    const gz = -(slope[i] * tz[i] + bk * nz[i]);
+    const gl = up / Math.hypot(gx, 1, gz);
+    nor.set([gx * gl, gl, gz * gl, gx * gl, gl, gz * gl], k * 6);
   }
   const idx = [];
   for (let k = 0; k < N; k++) {
@@ -839,7 +860,8 @@ function wallRibbon(track, off, y0, y1, skip, outward = false) {
     const z = pz[i] + nz[i] * d;
     let s = d > 0 ? -1 : 1;
     if (outward) s = -s;
-    pos.push(x, y0 + track.hy[i], z, x, y1 + track.hy[i], z);
+    const yb = track.hy[i] + d * track.bank[i];
+    pos.push(x, y0 + yb, z, x, y1 + yb, z);
     nor.push(nx[i] * s, 0, nz[i] * s, nx[i] * s, 0, nz[i] * s);
   }
   const right = off(0) > 0 !== outward;
@@ -1210,7 +1232,7 @@ function buildScenery(themeId, th, track, grid, rnd, gy, det, parts, glow, block
       const q = track.posAt(s, side * (track.hw[k] - 1.6), {});
       solid.box(p.x, p.y + RH + 2.9, p.z, 0.22, 5.8, 0.22, '#2a2440');
       solid.box((p.x + q.x) / 2, p.y + RH + 5.8, (p.z + q.z) / 2, 2.1, 0.18, 0.3, '#2a2440', 1, p.h + Math.PI / 2);
-      glow.box(q.x, q.y + RH + 5.65, q.z, 0.7, 0.14, 0.7, '#ffd0ff', 3.2);
+      glow.box(q.x, p.y + RH + 5.65, q.z, 0.7, 0.14, 0.7, '#ffd0ff', 3.2);
     }
     ring(n(70), radius + 500, radius + 900, (x, z) => {
       const h = 60 + rnd() * 220;

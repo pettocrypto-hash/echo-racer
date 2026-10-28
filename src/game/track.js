@@ -2,7 +2,7 @@
 // Wird gleichmäßig (ca. 1 m) abgetastet; alle Abfragen laufen über diese Stützpunkte.
 
 import { clamp, lerp, smoothstep, wrapAngle } from '../util.js';
-import { JUMP_H } from '../config.js';
+import { JUMP_H, JUMP_LEN, BANK_K, BANK_MAX } from '../config.js';
 
 function crPoint(p0, p1, p2, p3, t) {
   // Zentripetale Catmull-Rom-Spline (keine Schleifen/Spitzen)
@@ -145,6 +145,7 @@ export class Track {
     });
 
     this.jumps = this._findJumps(def);
+    this._banking(def);
 
     // Begrenzungsrahmen
     let minX = Infinity;
@@ -350,6 +351,58 @@ export class Track {
     for (let k = 0; k < N; k++) sl[k] = (hy[(k + 1) % N] - hy[(k - 1 + N) % N]) / (2 * this.step);
   }
 
+  // Steilkurven: Querneigung je Stützpunkt als tan(Winkel); > 0 = rechte Seite höher (Linkskurve, außen = rechts).
+  // Drehpunkt ist die Mittellinie, das Höhenprofil bleibt also gleich. Flach an Start/Ziel, Kreuzungen und
+  // Sprungschanzen (weich ausgeblendet); in Senken begrenzt, damit die Innenkante nicht in den Boden taucht.
+  _banking(def) {
+    const N = this.n;
+    const step = this.step;
+    const L = this.length;
+    const flat = new Uint8Array(N);
+    for (let k = 0; k < N; k++) {
+      const s = k * step;
+      if (this.crossing[k] || s > L - 75 || s < 30) flat[k] = 1;
+    }
+    for (const j of this.jumps) for (let s = j.s - JUMP_LEN - 12; s <= j.s + 30; s += step) flat[this.indexAt(s)] = 1;
+    // Abstand (m) zum nächsten flachen Stützpunkt, zirkulär
+    const dist = new Float32Array(N).fill(Infinity);
+    let last = -Infinity;
+    for (let i = 0; i < 2 * N; i++) {
+      if (flat[i % N]) last = i;
+      dist[i % N] = Math.min(dist[i % N], (i - last) * step);
+    }
+    last = Infinity;
+    for (let i = 2 * N - 1; i >= 0; i--) {
+      if (flat[i % N]) last = i;
+      dist[i % N] = Math.min(dist[i % N], (last - i) * step);
+    }
+    const raw = new Float32Array(N);
+    for (let k = 0; k < N; k++) raw[k] = clamp(this.curvWide[k] * BANK_K, -BANK_MAX, BANK_MAX);
+    const sm = smoothCircular(raw, Math.round(10 / step));
+    const floor = def.floor ?? -4;
+    const bank = (this.bank = new Float32Array(N));
+    for (let k = 0; k < N; k++) {
+      const fade = smoothstep(clamp(dist[k] / 22, 0, 1));
+      const lim = Math.max(0, (this.hy[k] - floor - 1.3) / (this.hw[k] + 0.6));
+      bank[k] = clamp(sm[k] * fade, -lim, lim);
+    }
+  }
+
+  bankAt(s) {
+    const f = this.wrapS(s) / this.step;
+    const i = Math.floor(f) % this.n;
+    return lerp(this.bank[i], this.bank[(i + 1) % this.n], f - Math.floor(f));
+  }
+
+  // Fahrbahnhöhe an (s, d) mit Querneigung (heightAt = Höhe der Mittellinie, "Ebene" für Brücken-Abfragen)
+  surfaceY(s, d) {
+    const f = this.wrapS(s) / this.step;
+    const i = Math.floor(f) % this.n;
+    const j = (i + 1) % this.n;
+    const t = f - Math.floor(f);
+    return lerp(this.hy[i], this.hy[j], t) + d * lerp(this.bank[i], this.bank[j], t);
+  }
+
   heightAt(s) {
     const f = this.wrapS(s) / this.step;
     const i = Math.floor(f) % this.n;
@@ -394,7 +447,8 @@ export class Track {
     out.tz = -nnx;
     out.h = Math.atan2(out.tx, out.tz);
     out.hw = lerp(this.hw[i], this.hw[j], t);
-    out.y = lerp(this.hy[i], this.hy[j], t);
+    out.bank = lerp(this.bank[i], this.bank[j], t);
+    out.y = lerp(this.hy[i], this.hy[j], t) + d * out.bank;
     out.i = i;
     return out;
   }

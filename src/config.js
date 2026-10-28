@@ -1,7 +1,7 @@
 // Zentrale Spielkonstanten. Werte hier ändern, um das Balancing anzupassen.
 
 export const VERSION = '1.0.0';
-export const PROTOCOL = 6;
+export const PROTOCOL = 7;
 
 export const TICK_RATE = 60;
 export const DT = 1 / TICK_RATE;
@@ -15,6 +15,11 @@ export const ECHO_PHASE_DIST = 8; // Echos werden für ein Auto erst fest, wenn 
 // Sprungschanzen (fest auf der Strecke) und Turbostart
 export const JUMP_LEN = 7; // Rampenlänge in m
 export const JUMP_H = 1.25; // Höhe der Absprungkante
+// Steilkurven: Querneigung tan(Winkel) = Krümmung × BANK_K, höchstens BANK_MAX (≈ 13°).
+// BANK_GRIP: so viel stärker lenkt ein Kart bei Tempo in eine voll geneigte Kurve hinein
+export const BANK_K = 7;
+export const BANK_MAX = 0.24;
+export const BANK_GRIP = 0.22;
 export const ROCKET_EARLY = -1.6; // ab hier zählt ein Drift-Druck im Countdown
 export const ROCKET_OK = -0.6; // ab hier (bis kurz nach LOS) gibt es den Turbostart, davor = zu früh
 
