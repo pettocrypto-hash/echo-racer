@@ -12,6 +12,9 @@ export function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
+// Logo-Buchstaben einzeln: Farbe reihum Rot, Blau, Gelb, Grün (o = Versatz), --i für das versetzte Wippen
+const logoWord = (w, o = 0) => [...w].map((ch, i) => `<b class="lc c${(i + o) % 4}" style="--i:${i + o}" data-l="${ch}">${ch}</b>`).join('');
+
 const STAT_DEFS = [
   ['Tempo', (c) => (c.top - 44) / 12],
   ['Beschleunigung', (c) => (c.accel - 15) / 12],
@@ -132,7 +135,7 @@ export class UI {
       'title',
       `<div class="title-wrap">
         <div class="title-left">
-          <div class="logo"><span class="l1">ECHO</span><span class="l2">RACER</span><span class="l3">Deine Runden werden zu Hindernissen.<br>Hack die Strecke.</span></div>
+          <div class="logo"><span class="l1">${logoWord('ECHO')}</span><span class="l2">${logoWord('RACER', 2)}</span><span class="l3">Deine Runden werden zu Hindernissen.<br>Hack die Strecke.</span></div>
           <div class="profile"><b class="lv"></b><div class="xpbar"><i></i></div><small class="xptxt"></small></div>
           <button class="daily"><span class="dhead">TAGES-CHALLENGE<em class="streak"></em></span><b class="dtrack"></b><small class="dtext"></small><span class="dgo"></span></button>
           <div class="missions"></div>

@@ -421,13 +421,18 @@ export class RaceView {
       case 'stall':
         if (pos) P.burst(pos.x, pos.y + 0.3, pos.z, 30, 4, 0.9, 0.7, '#9a9aa8', 1.2, 2);
         break;
+      case 'land':
+        this._land(v, pos, 0.07);
+        break;
       case 'hardLand':
         if (pos) P.burst(pos.x, pos.y + 0.2, pos.z, 20, 6, 0.6, 0.7, '#bba8a0', 1.2, 4);
         if (isMe) this.cam.shake = Math.max(this.cam.shake, 0.6);
+        this._land(v, pos, 0.14);
         break;
       case 'trickLand':
         if (pos) P.burst(pos.x, pos.y + 0.8, pos.z, 22, 8, 0.6, 0.45, '#fff4a0', 3, 2);
         if (isMe) this.fovKick = 6;
+        this._land(v, pos, 0.09);
         break;
       case 'reset':
         if (pos) P.burst(pos.x, pos.y + 1, pos.z, 30, 7, 0.8, 0.5, c.color, 3, 1);
@@ -527,6 +532,22 @@ export class RaceView {
     blink(d, v, dt);
     if (cheering) d.head.rotation.x = Math.sin(this.time * 9) * 0.12;
     else d.head.rotation.x = damp(d.head.rotation.x, sad ? 0.38 : 0, sad ? 3 : 8, dt);
+  }
+
+  // Landung: Stauchung je nach Aufprall-Tempo, Staubkranz um die Räder
+  _land(v, pos, k) {
+    if (!v) return;
+    const hit = clamp(-(v.airVy || -8) / 12, 0.45, 1.3);
+    v.landT = 0;
+    v.landK = k * hit;
+    v.airVy = 0;
+    if (!pos) return;
+    const n = Math.round(5 + hit * 4);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.4;
+      const s = 2.2 + Math.random() * 1.6 * hit;
+      this.smoke.emit(pos.x + Math.cos(a) * 1.1, pos.y + 0.25, pos.z + Math.sin(a) * 1.1, Math.cos(a) * s, 0.5 + Math.random() * 0.6, Math.sin(a) * s, 0.4 + Math.random() * 0.25, 0.42, this.smokeCol, 1, -0.3, 2.6);
+    }
   }
 
   // Regen: kleine Spritzer auf der Bahn vor der Kamera (scharfe Mini-Funken, kein Weichzeichner)
@@ -858,6 +879,18 @@ export class RaceView {
       else v.trickSpin = damp(v.trickSpin, Math.round(v.trickSpin / (Math.PI * 2)) * Math.PI * 2, 12, dt);
       if (st.wob > 0) roll += Math.sin(this.time * 38) * 0.12 * st.wob;
       v.tilt.rotation.set(pitch, 0, roll + v.trickSpin);
+      if (st.air) v.airVy = st.vy;
+      // Landung: Kart federt ein (gedämpfte Stauchung, Reifen und Karosserie geben nach) und schwingt aus
+      if (v.landT != null) {
+        v.landT += dt;
+        const T = v.landT;
+        const sq = v.landK * Math.exp(-T * 7) * Math.cos(T * 24);
+        v.tilt.scale.set(1 + sq * 0.45, 1 - sq, 1 + sq * 0.45);
+        if (T > 0.7) {
+          v.landT = null;
+          v.tilt.scale.set(1, 1, 1);
+        }
+      }
       v.shadow.scale.setScalar(1 / (1 + y * 0.25));
       v.shadow.material.opacity = 0.55 / (1 + y * 0.4);
       if (this.cer) this._cerPlace(c, v);
