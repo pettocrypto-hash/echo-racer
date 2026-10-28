@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import { GeoBuilder, BASIC } from './geo.js';
-import { chevronTexture, bannerTexture, sponsorAtlas, SPONSOR_IDS, SPONSOR_ROWS } from './textures.js';
+import { chevronTexture, bannerTexture, sponsorAtlas, SPONSOR_IDS, SPONSOR_ROWS, drawLogoText } from './textures.js';
 
 const FRAME = '#2a2633';
 
@@ -746,19 +746,8 @@ function blimpTexture(accent) {
   g.fillStyle = '#ffd23d';
   g.fillRect(0, 62, W, 18);
   g.fillRect(0, H - 80, W, 18);
-  const text = '★ ECHO RACER ★';
-  let size = 230;
-  g.font = `italic 900 ${size}px system-ui, "Segoe UI", Arial, sans-serif`;
-  size = Math.floor(size * Math.min(1, (W - 150) / g.measureText(text).width));
-  g.font = `italic 900 ${size}px system-ui, "Segoe UI", Arial, sans-serif`;
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  g.lineJoin = 'round';
-  g.strokeStyle = '#2a2633';
-  g.lineWidth = size * 0.11;
-  g.strokeText(text, W / 2, H / 2 + size * 0.04);
-  g.fillStyle = accent;
-  g.fillText(text, W / 2, H / 2 + size * 0.04);
+  // Schriftzug im Logo-Stil des Menüs (bunte Buchstaben mit weißem Rand)
+  drawLogoText(g, '★ ECHO RACER ★', W / 2, H / 2 + 8, 230, W - 170);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;

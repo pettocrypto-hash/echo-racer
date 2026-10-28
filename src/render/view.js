@@ -359,7 +359,7 @@ export class RaceView {
         const n = mine ? 9 : 2;
         const grp = v.group;
         for (let i = 0; i < n; i++) {
-          const col = ['#ff3b5c', '#ffd23d', '#2ce7ff', '#7dff5a', '#ff5fd0', '#ffffff'][(i + c.idx) % 6];
+          const col = ['#ff3b47', '#ffd23d', '#2f7dff', '#3ccf4e', '#ffffff'][(i + c.idx) % 5];
           const ang = Math.random() * Math.PI * 2;
           const rr = 11 + Math.random() * 8;
           this._later(0.25 + i * 0.33, () => {
@@ -372,7 +372,7 @@ export class RaceView {
           });
         }
         if (mine) {
-          for (const col of ['#ff3b5c', '#ffd23d', '#2ce7ff', '#7dff5a', '#ff5fd0']) P.burst(pos.x, pos.y + 2.5, pos.z, 24, 9, 1.6, 0.35, col, 2.2, 3);
+          for (const col of ['#ff3b47', '#ffd23d', '#2f7dff', '#3ccf4e']) P.burst(pos.x, pos.y + 2.5, pos.z, 24, 9, 1.6, 0.35, col, 2.2, 3);
           this.confetti.burst(pos.x, pos.y + 2, pos.z, 110, 0, 1, 0, 11, 0.6);
           this.world.cheer(1);
         } else this.world.cheer(0.5);
@@ -799,7 +799,7 @@ export class RaceView {
     C.burstT -= dt;
     if (C.burstT <= 0) {
       C.burstT = 0.22 + Math.random() * 0.2;
-      const cols = ['#ff3b5c', '#ffd23d', '#2ce7ff', '#7dff5a', '#ff5fd0', '#ffffff'];
+      const cols = ['#ff3b47', '#ffd23d', '#2f7dff', '#3ccf4e', '#ffffff'];
       const S = C.spots[Math.floor(Math.random() * 3)];
       this.particles.burst(S.x + (Math.random() - 0.5) * 3, S.y + 4 + Math.random() * 2, S.z + (Math.random() - 0.5) * 3, 22, 7, 1.6, 0.34, cols[Math.floor(Math.random() * cols.length)], 2.4, 4);
       this.confetti.burst(S.x + (Math.random() - 0.5) * 4, S.y + 7, S.z + (Math.random() - 0.5) * 4, 26, 0, 0.3, 0, 4, 0.9);

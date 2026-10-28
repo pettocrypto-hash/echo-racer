@@ -159,6 +159,27 @@ input {
   background: rgba(255, 255, 255, 0.13);
 }
 
+/* Hauptmenü: farbiger Streifen links je Eintrag (Logo-Farben) */
+.menu > .mbtn:not(.primary) {
+  box-shadow: inset 6px 0 0 var(--stripe, transparent);
+}
+
+.menu > [data-go="gp"] {
+  --stripe: var(--gelb);
+}
+
+.menu > [data-go="tt"] {
+  --stripe: var(--blau);
+}
+
+.menu > [data-go="online"] {
+  --stripe: var(--gruen);
+}
+
+.menu > [data-go="garage"] {
+  --stripe: var(--rot);
+}
+
 .mbtn:active {
   transform: skewX(-8deg) scale(0.96);
 }

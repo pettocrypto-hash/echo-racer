@@ -7,7 +7,7 @@ import { THEMES } from './themes.js';
 import { GeoBuilder, BASIC } from './geo.js';
 import {
   toyTrackTexture, toyTrackNormal, railTexture, railNormal, plasticRoughTexture, padTexture, checkerTexture, windowTexture, playmatTexture,
-  lavaTextures, sandTexture, textTexture, billboardAtlas, setAnisotropy, grassTexture, roadArrowTexture, pavingTexture,
+  lavaTextures, sandTexture, logoTexture, billboardAtlas, setAnisotropy, grassTexture, roadArrowTexture, pavingTexture,
 } from './textures.js';
 import { mulberry32 } from '../util.js';
 import { buildChevrons, buildGrandstand, buildBannerPoles, buildBalloons, buildSponsorBoards, buildSpectators, buildBlimp } from './trackside.js';
@@ -297,14 +297,16 @@ export function buildWorld(track, themeId, { renderer = null, quality = null } =
   const gateMesh = new THREE.Mesh(gate.build(), new THREE.MeshLambertMaterial({ vertexColors: true }));
   const banner = new THREE.Mesh(new THREE.PlaneGeometry(gw * 2, 1.0), new THREE.MeshBasicMaterial({ map: checkerTexture(), side: THREE.DoubleSide }));
   banner.position.set(0, 6.9, -0.62);
-  const sign = new THREE.Mesh(
-    new THREE.PlaneGeometry(gw * 1.4, gw * 0.18),
-    new THREE.MeshBasicMaterial({ map: textTexture('ECHO RACER', '#ffffff', 'rgba(0,0,0,0)', 1024, 128), transparent: true, color: col('#ffffff', 2.2), side: THREE.DoubleSide })
-  );
+  // Schriftzug auf beiden Seiten lesbar: zwei einseitige Schilder Rücken an Rücken
+  const signGeo = new THREE.PlaneGeometry(gw * 1.4, gw * 0.18);
+  const signMat = new THREE.MeshBasicMaterial({ map: logoTexture('ECHO RACER', 1024, 160), transparent: true, color: col('#ffffff', 1.25) });
+  const sign = new THREE.Mesh(signGeo, signMat);
   sign.position.set(0, 8.0, -0.62);
   sign.rotation.y = Math.PI;
+  const signBack = new THREE.Mesh(signGeo, signMat);
+  signBack.position.set(0, 8.0, 0.62);
   const gantryGroup = new THREE.Group();
-  gantryGroup.add(gateMesh, banner, sign);
+  gantryGroup.add(gateMesh, banner, sign, signBack);
   gantryGroup.position.set(P0.x, 0, P0.z);
   gantryGroup.rotation.y = P0.h;
   root.add(gantryGroup);

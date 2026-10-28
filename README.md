@@ -7,7 +7,7 @@ Mobiler Fun-Racer im Browser – schnell, bunt, kompetitiv: offene Spielzeug-Kar
 
 Dazu: **Grand-Prix-Meisterschaft** über alle sechs Welten, **Spiegelmodus** für jede Strecke, **Fahrer-Level mit XP**, **Tages-Challenge** mit Serien-Bonus, **Medaillen im Zeitfahren**, **Stil-Kette** (Combo-Multiplikator), **Rivalen**, **24 Erfolge** und **12 Lacke** (u. a. Chrom, Holo, Carbon, Gold, Galaxie) sowie Effekte wie Speed-Streifen, Treffer-Freeze, Datenstrahlen, Feuerwerk und Fotofinish in Zeitlupe.
 
-Look der App: Schriftzug „ECHO RACER“ aus bunten Spielzeug-Buchstaben in Rot, Blau, Gelb und Grün (weißer Rand, Glanzkante, 3D-Kante, leichtes Wippen); Leisten und Balken (XP, Aufträge, Kart-Werte, Erfolge, Hack-Ladung) in denselben vier Farben, Akzente in Blau und Rot.
+Look der App: Schriftzug „ECHO RACER“ aus bunten Spielzeug-Buchstaben in Rot, Blau, Gelb und Grün (weißer Rand, Glanzkante, 3D-Kante, leichtes Wippen); Leisten und Balken (XP, Aufträge, Kart-Werte, Erfolge, Hack-Ladung) in denselben vier Farben, Akzente in Blau und Rot, farbige Streifen an den Menüknöpfen. Derselbe Schriftzug hängt über der Start-/Zielbrücke (von beiden Seiten lesbar) und steht auf dem Werbe-Luftschiff; Konfetti und Zielfeuerwerk in den Logo-Farben.
 
 Optik: glänzende Spielzeug-Karts mit großen Cartoon-Figuren auf einer aufgeständerten Plastik-Rennbahn – Metallic-Lack, Chrom-Motoren, dicke Reifen, Startnummern, Loopings, Booster-Tore, Sprungschanzen und eine Tribüne voller hüpfender Steckfiguren. Natürliche Farben, weiches Licht mit Umgebungsverdeckung, alles gestochen scharf (keine Bewegungs- oder Tiefenunschärfe).
 

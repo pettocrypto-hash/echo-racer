@@ -968,6 +968,80 @@ export function sandTexture(base) {
 }
 
 // Schriftzug für das Startportal
+// Logo-Schrift wie im Menü: Buchstaben reihum Rot, Blau, Gelb, Grün (zweites Wort um 2 versetzt), weißer Rand,
+// dunkle Außenkante und Glanz auf der oberen Hälfte; Sterne gelb. Passt die Schrift nicht in maxW, wird sie kleiner.
+export const LOGO_COLORS = ['#ff3b47', '#2f7dff', '#ffd23d', '#3ccf4e'];
+export function drawLogoText(g, text, cx, cy, size, maxW = Infinity) {
+  const font = (s) => `italic 900 ${s}px system-ui, "Segoe UI", Arial, sans-serif`;
+  const chars = [...text];
+  const measure = (s) => {
+    g.font = font(s);
+    return chars.map((ch) => g.measureText(ch).width);
+  };
+  let widths = measure(size);
+  const gap = () => size * 0.015;
+  let total = widths.reduce((a, w) => a + w, 0) + gap() * (chars.length - 1);
+  if (total > maxW) {
+    size *= maxW / total;
+    widths = measure(size);
+    total = widths.reduce((a, w) => a + w, 0) + gap() * (chars.length - 1);
+  }
+  // Farbe je Zeichen
+  const cols = [];
+  let word = -1;
+  let k = 0;
+  let inWord = false;
+  for (const ch of chars) {
+    const letter = /[A-Za-zÄÖÜäöü0-9]/.test(ch);
+    if (letter && !inWord) {
+      word++;
+      k = 0;
+    }
+    inWord = letter;
+    cols.push(letter ? LOGO_COLORS[(k++ + word * 2) % 4] : ch.trim() ? '#ffd23d' : null);
+  }
+  const xs = [];
+  let x = cx - total / 2;
+  for (const w of widths) {
+    xs.push(x);
+    x += w + gap();
+  }
+  g.save();
+  g.font = font(size);
+  g.textAlign = 'left';
+  g.textBaseline = 'middle';
+  g.lineJoin = 'round';
+  // erst alle Außenkanten, dann alle weißen Ränder, dann die Füllungen – nichts überdeckt den Nachbarbuchstaben
+  g.strokeStyle = '#160e3a';
+  g.lineWidth = size * 0.24;
+  chars.forEach((ch, i) => cols[i] && g.strokeText(ch, xs[i], cy + size * 0.04));
+  g.strokeStyle = '#ffffff';
+  g.lineWidth = size * 0.13;
+  chars.forEach((ch, i) => cols[i] && g.strokeText(ch, xs[i], cy));
+  chars.forEach((ch, i) => {
+    if (!cols[i]) return;
+    g.fillStyle = cols[i];
+    g.fillText(ch, xs[i], cy);
+    // Glanz oben
+    g.save();
+    g.beginPath();
+    g.rect(xs[i] - size * 0.2, cy - size, widths[i] + size * 0.4, size * 0.92);
+    g.clip();
+    g.fillStyle = 'rgba(255,255,255,0.28)';
+    g.fillText(ch, xs[i], cy);
+    g.restore();
+  });
+  g.restore();
+}
+
+export function logoTexture(text, w = 1024, h = 160) {
+  return cached('logo:' + text + w + 'x' + h, () => {
+    const c = canvas(w, h);
+    drawLogoText(c.getContext('2d'), text, w / 2, h / 2, h * 0.66, w * 0.94);
+    return finish(c);
+  });
+}
+
 export function textTexture(text, color, bg = 'rgba(0,0,0,0)', w = 512, h = 64) {
   return cached('text:' + text + color + bg, () => {
     const c = canvas(w, h);
@@ -1606,7 +1680,7 @@ const STICKER_LOOK = {
   glitch: { bg: '#ff3dd0', fg: '#ffffff', text: 'GLITCH GUM', split: true },
   toffee: { bg: '#ffe14d', fg: '#c2185b', text: 'TURBO-TOFFEE' },
   mira: { bg: '#2f7df6', bg2: '#5aa7ff', fg: '#ffffff', text: 'MIRA MILCH' },
-  racer: { bg: '#0b0b12', fg: '#2ce7ff', text: '★ ECHO RACER', glow: '#2ce7ff' },
+  racer: { bg: '#0b0b12', fg: '#2ce7ff', text: '★ ECHO RACER', logo: true },
   turbo: { bg: '#e8202e', fg: '#ffffff', text: 'TURBO', icon: 'chev' },
   hack: { bg: '#141414', fg: '#6bff5c', text: '</HACK>', mono: true },
   star: { bg: '#ffd23d', fg: '#141414', text: '★ ★ ★' },
@@ -1671,6 +1745,11 @@ function drawSticker(g, W, H, L) {
     g.fill();
     x = (W + 120) / 2;
     maxW = W - 170;
+  }
+  // Spiel-Logo: bunte Buchstaben wie im Menü
+  if (L.logo) {
+    drawLogoText(g, L.text, x, 64, 62, maxW);
+    return;
   }
   const opt = { align: 'center', weight: 900 };
   if (L.mono) Object.assign(opt, { weight: 'bold', italic: false, family: '"Courier New", Consolas, monospace' });

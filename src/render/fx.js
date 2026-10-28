@@ -681,7 +681,8 @@ export class SkidMarks {
 }
 
 // Konfetti: kleine Papierschnipsel (Instanzen), drehen sich, flattern und sinken langsam – sichtbar bei Tag und Nacht
-const CONFETTI_COLS = ['#ff3b5c', '#ffd23d', '#2ce7ff', '#7dff5a', '#ff5fd0', '#ffffff', '#a585ff', '#ff8a1f'].map((c) => new THREE.Color(c));
+// Konfetti in den Logo-Farben (Rot, Blau, Gelb, Grün) + Weiß
+const CONFETTI_COLS = ['#ff3b47', '#2f7dff', '#ffd23d', '#3ccf4e', '#ffffff'].map((c) => new THREE.Color(c));
 export class Confetti {
   constructor(max = 500) {
     this.max = max;
