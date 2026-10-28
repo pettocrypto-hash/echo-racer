@@ -1078,6 +1078,24 @@ export class RaceSession {
     else if (t > -COUNTDOWN) {
       au.startEngine(c.stats.id);
       au.setEngine(st.spd / c.stats.top, c.input.throttle || 0, st.boostT > 0, !!st.drift, st.driftLvl, !!st.air);
+      // nächster Gegner in Hörweite brummt mit (Stereo nach Seite, Doppler nach Annäherung)
+      let near = null;
+      let nd = 40;
+      for (const o of this.sim.cars) {
+        if (o === c || o.ghost) continue;
+        const d = Math.hypot(o.st.x - st.x, o.st.z - st.z);
+        if (d < nd) {
+          nd = d;
+          near = o;
+        }
+      }
+      if (near) {
+        const dx = (near.st.x - st.x) / Math.max(0.5, nd);
+        const dz = (near.st.z - st.z) / Math.max(0.5, nd);
+        const pan = dx * -Math.cos(st.h) + dz * Math.sin(st.h);
+        const closing = -(((near.st.vx || 0) - (st.vx || 0)) * dx + ((near.st.vz || 0) - (st.vz || 0)) * dz);
+        au.rivalEngine(near.stats.id, nd, (near.st.spd || 0) / near.stats.top, pan || 0, closing || 0);
+      } else au.rivalEngine(null);
     }
   }
 

@@ -357,7 +357,64 @@ export class AudioEngine {
     this.engine = { type, pr, o1, o2, o3, f, g, n, bp, dg, lope, lfos };
   }
 
+  // Gegner-Motor: der nächste Gegner in Hörweite brummt mit (Klang seines Karts, leiser, links/rechts verteilt,
+  // Doppler: nähert er sich, klingt er höher). type = Kart-Id oder null (keiner in der Nähe)
+  rivalEngine(type, dist, speedRatio, pan, closing) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    let r = this.rival;
+    if (type == null || dist > 40 || !this.engine) {
+      if (r) r.g.gain.setTargetAtTime(0, t, 0.12);
+      return;
+    }
+    if (!r || r.type !== type) {
+      this._stopRival();
+      const pr = ENGINES[type] || ENGINES.komet;
+      const o = ctx.createOscillator();
+      o.type = pr.w[0];
+      const f = ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.Q.value = pr.q;
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      o.connect(f);
+      f.connect(g);
+      if (p) {
+        g.connect(p);
+        p.connect(this.sfxGain);
+      } else g.connect(this.sfxGain);
+      o.start();
+      r = this.rival = { type, pr, o, f, g, p };
+    }
+    const pr = r.pr;
+    const rpm = Math.min(1.25, 0.3 + Math.max(0, speedRatio) * 0.85);
+    const dop = Math.max(0.85, Math.min(1.18, 1 + closing * 0.006));
+    r.o.frequency.setTargetAtTime((pr.base + rpm * pr.range) * dop, t, 0.05);
+    r.f.frequency.setTargetAtTime(pr.f0 + rpm * pr.f1 * 0.7, t, 0.08);
+    const k = 1 - dist / 40;
+    r.g.gain.setTargetAtTime(0.04 * k * k * pr.vol, t, 0.08);
+    if (r.p) r.p.pan.setTargetAtTime(Math.max(-0.85, Math.min(0.85, pan)), t, 0.08);
+  }
+
+  _stopRival() {
+    const r = this.rival;
+    if (!r) return;
+    this.rival = null;
+    r.g.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
+    setTimeout(() => {
+      try {
+        r.o.stop();
+      } catch {
+        /* schon gestoppt */
+      }
+      r.g.disconnect();
+    }, 300);
+  }
+
   stopEngine() {
+    this._stopRival();
     if (!this.engine) return;
     const e = this.engine;
     const t = this.ctx.currentTime;

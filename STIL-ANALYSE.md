@@ -130,7 +130,7 @@ Legende: ✅ umgesetzt · 🔧 in Arbeit · 📋 geplant · 💡 Idee für spät
 - ✅ **Steilkurven** in allen Welten.
 - ✅ **Zuschauer an vielen Stellen:** Balkone mit hüpfenden Steckfiguren und Fähnchen an Schanzen und Kurvenausgängen.
 - ✅ **Werbe-Luftschiff** über jeder Welt, **Autoscooter-Halle** im Lunapark, **Gischt** hinter den Rädern im Regen, **Staubteufel** im Canyon, **Rasensprenger** im Garten, **Regenbogen** über der Wolkenarena.
-- ✅ **Motorklang je Kart** (sechs Charaktere) und Aufheulen in der Garage.
+- ✅ **Motorklang je Kart** (sechs Charaktere), Aufheulen in der Garage, Gegner-Motor in Stereo mit Doppler.
 - ✅ **Sechste Welt: Lunapark** am Abend – Riesenrad, Karussell, Kettenkarussell, Freifallturm, Achterbahn mit Zug, Buden, Lichterketten über der Bahn, Feuerwerk und eine Durchfahrt durch ein Zirkuszelt (eigener Streckenverlauf, eigene Rummel-Musik).
 
 ---
